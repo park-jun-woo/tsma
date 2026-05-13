@@ -88,6 +88,66 @@ func TestLogin_Failure(t *testing.T) {}
 	}
 }
 
+func TestGoMatcherUnexportedGetEnv(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFixture(t, dir, "internal/config/config.go", `package config
+
+func getEnv(key string) string { return "" }
+`)
+
+	writeFixture(t, dir, "internal/config/config_test.go", `package config
+
+import "testing"
+
+func TestGetEnv_Fallback(t *testing.T) {}
+`)
+
+	m := &GoMatcher{}
+	fn := &model.Function{
+		Name: "getEnv",
+		File: "internal/config/config.go",
+	}
+
+	testFile, found := m.Match(dir, fn)
+	if !found {
+		t.Fatal("expected to find test file for unexported getEnv")
+	}
+	if testFile != filepath.Join("internal", "config", "config_test.go") {
+		t.Errorf("testFile = %q, unexpected", testFile)
+	}
+}
+
+func TestGoMatcherUnexportedParseTemplateID(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFixture(t, dir, "internal/parser/parser.go", `package parser
+
+func parseTemplateID(raw string) (int, error) { return 0, nil }
+`)
+
+	writeFixture(t, dir, "internal/parser/parser_test.go", `package parser
+
+import "testing"
+
+func TestParseTemplateID_Valid(t *testing.T) {}
+`)
+
+	m := &GoMatcher{}
+	fn := &model.Function{
+		Name: "parseTemplateID",
+		File: "internal/parser/parser.go",
+	}
+
+	testFile, found := m.Match(dir, fn)
+	if !found {
+		t.Fatal("expected to find test file for unexported parseTemplateID")
+	}
+	if testFile != filepath.Join("internal", "parser", "parser_test.go") {
+		t.Errorf("testFile = %q, unexpected", testFile)
+	}
+}
+
 func TestGoMatcherNotFound(t *testing.T) {
 	dir := t.TempDir()
 

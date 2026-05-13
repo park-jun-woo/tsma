@@ -22,5 +22,9 @@ func matchesTestFunc(decl ast.Decl, funcName string) bool {
 		return false
 	}
 	suffix := testName[len("Test"):]
-	return strings.Contains(suffix, funcName)
+	if len(funcName) == 0 {
+		return false
+	}
+	capitalized := strings.ToUpper(funcName[:1]) + funcName[1:]
+	return strings.Contains(suffix, capitalized) || strings.Contains(suffix, funcName)
 }
