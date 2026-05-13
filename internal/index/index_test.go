@@ -70,17 +70,14 @@ func TestNewIndexerUnsupported(t *testing.T) {
 func TestGoIndexerBasic(t *testing.T) {
 	dir := t.TempDir()
 
-	writeFile(t, dir, "main.go", `package main
-
-func main() {
-	handleLogin()
-}
-`)
-
 	writeFile(t, dir, "handler.go", `package main
 
 func handleLogin() {
 	svc.Login()
+}
+
+func ProcessRequest() {
+	handleLogin()
 }
 `)
 
@@ -91,12 +88,12 @@ func handleLogin() {
 	}
 
 	if len(funcs) != 2 {
-		t.Fatalf("expected 2 functions, got %d", len(funcs))
+		t.Fatalf("expected 2 functions (main/init excluded), got %d", len(funcs))
 	}
 
 	found := findByName(funcs, "main")
-	if found == nil {
-		t.Error("expected to find function 'main'")
+	if found != nil {
+		t.Error("main should be excluded")
 	}
 
 	found = findByName(funcs, "handleLogin")
@@ -199,9 +196,9 @@ func MockLogin() {}
 func TestGoIndexerSkipsVendor(t *testing.T) {
 	dir := t.TempDir()
 
-	writeFile(t, dir, "main.go", `package main
+	writeFile(t, dir, "app.go", `package main
 
-func main() {}
+func Start() {}
 `)
 	writeFile(t, dir, "vendor/lib/lib.go", `package lib
 

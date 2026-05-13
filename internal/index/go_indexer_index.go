@@ -50,6 +50,9 @@ func collectGoFunctions(f *ast.File, fset *token.FileSet, relPath, pkgDir string
 		if !ok || fd.Body == nil {
 			continue
 		}
+		if fd.Name.Name == "main" || fd.Name.Name == "init" {
+			continue
+		}
 		fn := buildGoFunction(fd, fset, relPath, pkgDir)
 		*functions = append(*functions, fn)
 	}
