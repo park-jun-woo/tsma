@@ -1,8 +1,7 @@
 package model
 
-// Status constants.
 const (
-	StatusTodo    = "todo"
-	StatusPartial = "partial"
-	StatusDone    = "done"
+	StatusTodo = "todo"
+	StatusFail = "fail"
+	StatusDone = "done"
 )

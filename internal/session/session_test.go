@@ -15,7 +15,7 @@ func TestSaveAndLoad(t *testing.T) {
 	sess := &model.Session{
 		Project: dir,
 		Lang:    "go",
-		Created: time.Now(),
+		CheckedAt: time.Now(),
 		Functions: []model.Function{
 			{
 				QualifiedName: "pkg.Login",

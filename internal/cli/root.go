@@ -15,10 +15,10 @@ var Version = "dev"
 // rootCmd is the top-level command.
 var rootCmd = &cobra.Command{
 	Use:   "tsma",
-	Short: "Function-level test coverage tracker for legacy codebases",
-	Long: `TestMaster tracks function-level test coverage for legacy codebases.
-It indexes all functions, shows untested ones, validates submitted tests,
-and tracks branch coverage progress.`,
+	Short: "Function-level test status tracker for legacy codebases",
+	Long: `TestMaster tracks function-level test status for legacy codebases.
+It indexes all functions, matches test files, runs tests to determine
+pass/fail status, and measures branch coverage.`,
 	Version: Version,
 }
 
@@ -34,8 +34,9 @@ func Execute(version string) {
 
 func init() {
 	rootCmd.AddCommand(nextCmd)
-	rootCmd.AddCommand(submitCmd)
+	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(coverCmd)
 	rootCmd.AddCommand(resetCmd)
 }

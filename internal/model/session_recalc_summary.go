@@ -8,8 +8,8 @@ func (s *Session) RecalcSummary() {
 		switch fn.Status {
 		case StatusDone:
 			s.Summary.Done++
-		case StatusPartial:
-			s.Summary.Partial++
+		case StatusFail:
+			s.Summary.Fail++
 		default:
 			s.Summary.Todo++
 		}

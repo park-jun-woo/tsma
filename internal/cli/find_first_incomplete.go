@@ -1,14 +1,15 @@
 //ff:func feature=cli type=helper control=iteration dimension=1
-//ff:what Returns a pointer to the first TODO or PARTIAL function in the session
+//ff:what Finds the first TODO or FAIL function in the session
 package cli
 
 import "github.com/park-jun-woo/tsma/internal/model"
 
-// findFirstIncomplete returns the first function with TODO or PARTIAL status.
+// findFirstIncomplete returns the first TODO or FAIL function, or nil if all DONE.
 func findFirstIncomplete(sess *model.Session) *model.Function {
 	for i := range sess.Functions {
-		if sess.Functions[i].Status == model.StatusTodo || sess.Functions[i].Status == model.StatusPartial {
-			return &sess.Functions[i]
+		fn := &sess.Functions[i]
+		if fn.Status == model.StatusTodo || fn.Status == model.StatusFail {
+			return fn
 		}
 	}
 	return nil

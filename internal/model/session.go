@@ -1,5 +1,5 @@
 //ff:type feature=model type=model
-//ff:what Represents the persistent state for a project
+//ff:what Represents the persistent session state for a project
 package model
 
 import "time"
@@ -7,7 +7,7 @@ import "time"
 type Session struct {
 	Project   string     `json:"project"`
 	Lang      string     `json:"lang"`
-	Created   time.Time  `json:"created"`
+	CheckedAt time.Time  `json:"checked_at"`
 	Functions []Function `json:"functions"`
 	Summary   Summary    `json:"summary"`
 }

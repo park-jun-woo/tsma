@@ -60,16 +60,14 @@ func runReset(cmd *cobra.Command, args []string) error {
 
 	fn.Status = model.StatusTodo
 	fn.TestFile = ""
-	fn.CoveragePct = 0
-	fn.UncoveredBranches = nil
-	fn.RetryCount = 0
+	fn.FailOutput = ""
 	sess.RecalcSummary()
 
 	if err := session.Save(root, sess); err != nil {
 		return fmt.Errorf("save session: %w", err)
 	}
 
-	remaining := sess.Summary.Todo + sess.Summary.Partial
+	remaining := sess.Summary.Todo + sess.Summary.Fail
 	fmt.Printf("%s reset to TODO (%d remaining)\n", funcName, remaining)
 	return nil
 }

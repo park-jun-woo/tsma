@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Lists all functions with pagination
+//ff:what Lists all functions with pagination showing name and status
 package cli
 
 import (
@@ -13,8 +13,8 @@ var listPage int
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all functions with their progress status",
-	Long:  `List all functions with their current status (DONE/PARTIAL/TODO) and coverage.`,
+	Short: "List all functions with their status",
+	Long:  `List all functions with their current status (DONE/FAIL/TODO) and pagination.`,
 	RunE:  runList,
 }
 
@@ -36,15 +36,11 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load session: %w", err)
 	}
 
-	functions := sess.Functions
+	fmt.Printf("%d functions — DONE: %d | FAIL: %d | TODO: %d\n\n",
+		sess.Summary.Total, sess.Summary.Done, sess.Summary.Fail, sess.Summary.Todo)
 
-	// Print summary header.
-	fmt.Printf("%d functions — DONE: %d | PARTIAL: %d | TODO: %d\n\n",
-		sess.Summary.Total, sess.Summary.Done, sess.Summary.Partial, sess.Summary.Todo)
-
-	// Calculate pagination.
 	const pageSize = 20
-	total := len(functions)
+	total := len(sess.Functions)
 	if listPage < 1 {
 		listPage = 1
 	}
@@ -58,11 +54,10 @@ func runList(cmd *cobra.Command, args []string) error {
 		end = total
 	}
 
-	page := functions[start:end]
+	page := sess.Functions[start:end]
 	maxName := maxFuncNameLen(page)
 	printFuncList(page, maxName)
 
-	// Print pagination info.
 	totalPages := (total + pageSize - 1) / pageSize
 	if totalPages > 1 {
 		fmt.Printf("\nPage %d/%d (use --page N to navigate)\n", listPage, totalPages)

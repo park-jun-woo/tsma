@@ -9,6 +9,7 @@ required:
     cli: "CLI command orchestration"
     model: "core data structures"
     index: "function indexing from source code"
+    match: "function-test file matching by convention"
   type:
     command: "cobra CLI command entrypoint"
     implementation: "language-specific feature implementation"

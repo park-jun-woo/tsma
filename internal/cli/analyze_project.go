@@ -1,5 +1,5 @@
-//ff:func feature=cli type=helper control=sequence
-//ff:what Performs initial project analysis: detect language and index functions
+//ff:func feature=cli type=helper control=iteration dimension=1
+//ff:what Detects language, indexes functions, and matches test files to build a session
 package cli
 
 import (
@@ -9,19 +9,18 @@ import (
 
 	"github.com/park-jun-woo/tsma/internal/detect"
 	"github.com/park-jun-woo/tsma/internal/index"
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
-// analyzeProject performs initial project analysis.
+// analyzeProject detects the language, indexes functions, and matches test files.
 func analyzeProject(projectRoot string) (*model.Session, error) {
-	// Step 1: Detect language.
 	lf, err := detect.Detect(projectRoot)
 	if err != nil {
 		return nil, fmt.Errorf("detect language: %w", err)
 	}
 	fmt.Fprintf(os.Stderr, "Detected: %s\n", lf.Lang)
 
-	// Step 2: Index all functions.
 	fmt.Fprintln(os.Stderr, "Indexing functions...")
 	idxr := index.NewIndexer(lf.Lang)
 	functions, err := idxr.Index(projectRoot)
@@ -30,13 +29,20 @@ func analyzeProject(projectRoot string) (*model.Session, error) {
 	}
 	fmt.Fprintf(os.Stderr, "Found %d functions\n", len(functions))
 
-	// Step 3: Set initial status for all functions.
-	setInitialStatus(functions)
+	fmt.Fprintln(os.Stderr, "Matching test files...")
+	m := match.NewMatcher(lf.Lang)
+	for i := range functions {
+		functions[i].Status = model.StatusTodo
+		testFile, found := m.Match(projectRoot, &functions[i])
+		if found {
+			functions[i].TestFile = testFile
+		}
+	}
 
 	sess := &model.Session{
 		Project:   projectRoot,
 		Lang:      lf.Lang,
-		Created:   time.Now(),
+		CheckedAt: time.Now(),
 		Functions: functions,
 	}
 	sess.RecalcSummary()
