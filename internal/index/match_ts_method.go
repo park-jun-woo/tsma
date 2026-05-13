@@ -34,11 +34,7 @@ func matchTSMethod(line, currentClass, relDir, relPath string, lineNum int) (mod
 		File:          relPath,
 		StartLine:     lineNum,
 		EndLine:       lineNum,
-		IsMethod:      true,
-		Receiver:      currentClass,
 		Exported:      exported,
-		EntryPoint:    false,
-		Dead:          false,
 		Status:        model.StatusTodo,
 	}, true
 }

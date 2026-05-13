@@ -9,7 +9,6 @@ required:
     cli: "CLI command orchestration"
     model: "core data structures"
     index: "function indexing from source code"
-    graph: "call graph construction and analysis"
   type:
     command: "cobra CLI command entrypoint"
     implementation: "language-specific feature implementation"

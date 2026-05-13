@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/park-jun-woo/tsma/internal/coverage"
-	"github.com/park-jun-woo/tsma/internal/model"
 	"github.com/park-jun-woo/tsma/internal/runner"
 	"github.com/park-jun-woo/tsma/internal/session"
 	"github.com/spf13/cobra"
@@ -23,8 +22,7 @@ Two-stage validation:
 
 Results:
   DONE    — test passes and 100% branch coverage
-  PARTIAL — test passes but coverage is below 100% (uncovered branches shown)
-  FAIL    — test does not pass (rejected)`,
+  PARTIAL — test passes but coverage is below 100% (retry up to 2 times)`,
 	Args: cobra.ExactArgs(2),
 	RunE: runSubmit,
 }
@@ -52,10 +50,10 @@ func runSubmit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load session: %w", err)
 	}
 
-	// Find the function, checking for ambiguity.
-	fn, err := findFunctionOrAmbiguous(sess, funcName)
-	if err != nil {
-		return err
+	// Find the function.
+	fn := sess.FindFunction(funcName)
+	if fn == nil {
+		return fmt.Errorf("function not found: %s", funcName)
 	}
 
 	// Stage 1: Run tests.
@@ -81,33 +79,19 @@ func runSubmit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("coverage check: %w", err)
 	}
 
-	// Print coverage details.
 	printCoverageReport(report)
 
-	// Copy test file and update session.
+	// Copy test file and update function.
 	relTest, err := session.CopyTestFile(root, testFile)
 	if err != nil {
 		return fmt.Errorf("copy test file: %w", err)
 	}
 	fn.TestFile = relTest
-	fn.CoveragePct = report.TotalPct
 
-	if report.AllCovered {
-		fn.Status = model.StatusDone
-		fn.UncoveredBranches = nil
-		sess.RecalcSummary()
-		remaining := sess.Summary.Todo + sess.Summary.Partial
-		fmt.Printf("DONE — %s complete (%d remaining)\n", funcName, remaining)
-	} else {
-		fn.Status = model.StatusPartial
-		fn.UncoveredBranches = nil
-		for _, ub := range report.Uncovered {
-			fn.UncoveredBranches = append(fn.UncoveredBranches, ub.Line)
-		}
-		sess.RecalcSummary()
-		uncoveredCount := len(report.Uncovered)
-		fmt.Printf("PARTIAL — %s needs %d more branch(es) covered\n", funcName, uncoveredCount)
-	}
+	prevPct := fn.CoveragePct
+	applySubmitResult(fn, report, prevPct)
+	sess.RecalcSummary()
+	printSubmitOutcome(fn, funcName, report, sess)
 
 	if err := session.Save(root, sess); err != nil {
 		return fmt.Errorf("save session: %w", err)

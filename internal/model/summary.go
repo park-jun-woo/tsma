@@ -3,8 +3,8 @@
 package model
 
 type Summary struct {
-	Testable int `json:"testable"`
-	Done     int `json:"done"`
-	Partial  int `json:"partial"`
-	Todo     int `json:"todo"`
+	Total   int `json:"total"`
+	Done    int `json:"done"`
+	Partial int `json:"partial"`
+	Todo    int `json:"todo"`
 }

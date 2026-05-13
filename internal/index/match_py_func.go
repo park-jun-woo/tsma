@@ -26,7 +26,6 @@ func matchPyFunc(line string, lineNum int, relPath, relDir, currentClass string,
 	}
 
 	isMethod := currentClass != "" && indent > classIndent
-	isSelfMethod := isMethod && strings.Contains(line, "(self")
 
 	receiver := ""
 	if isMethod {
@@ -42,11 +41,7 @@ func matchPyFunc(line string, lineNum int, relPath, relDir, currentClass string,
 		File:          relPath,
 		StartLine:     lineNum,
 		EndLine:       lineNum,
-		IsMethod:      isSelfMethod,
-		Receiver:      receiver,
 		Exported:      exported,
-		EntryPoint:    false,
-		Dead:          false,
 		Status:        model.StatusTodo,
 	}
 

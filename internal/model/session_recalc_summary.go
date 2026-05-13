@@ -3,12 +3,8 @@
 package model
 
 func (s *Session) RecalcSummary() {
-	s.Summary = Summary{}
+	s.Summary = Summary{Total: len(s.Functions)}
 	for _, fn := range s.Functions {
-		if fn.Dead {
-			continue
-		}
-		s.Summary.Testable++
 		switch fn.Status {
 		case StatusDone:
 			s.Summary.Done++

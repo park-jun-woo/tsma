@@ -32,10 +32,7 @@ func matchTSTopLevelFunc(trimmed, relDir, relPath string, lineNum int) (model.Fu
 		File:          relPath,
 		StartLine:     lineNum,
 		EndLine:       lineNum,
-		IsMethod:      false,
 		Exported:      exported,
-		EntryPoint:    false,
-		Dead:          false,
 		Status:        model.StatusTodo,
 	}, true
 }

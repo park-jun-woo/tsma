@@ -1,27 +1,63 @@
-# TestMaster
+# tsma
 
-Extract tests from legacy code with LLM agents.
+레거시 코드의 회귀 방어를 위한 함수 단위 테스트 관리 CLI 도구.
 
-## Install
+테스트 없이 프로덕션에서 돌아가는 코드에 테스트를 붙여서, 향후 변경 시 기존 동작이 깨지는 걸 막는다.
+
+## 역할
+
+| 역할 | 설명 |
+|---|---|
+| **Linter** | 함수-테스트 매핑 누락 탐지. "이 함수에 테스트가 없다" |
+| **리포트** | 커버리지 정보 제공. 게이트가 아니라 대시보드 |
+| **세션** | LLM 에이전트 연속 작업을 위한 진행 상태 보존 |
+
+## 설치
 
 ```bash
 make install
 ```
 
-## Usage
+## 사용법
 
 ```
-tsma next                          # show next incomplete endpoint + call chain
-tsma submit <endpoint> <test-file> # submit a test file for verification
-tsma list [--page N] [--size S]    # list all endpoints with status
-tsma status [--endpoint E]         # show progress summary or endpoint detail
-tsma reset [<endpoint> | --all]    # reset endpoint or delete session
+tsma next                                    다음 미완료 함수 출력 (세션 없으면 자동 분석)
+tsma submit <func> <test-file> [--model M]   테스트 제출 → pass 검증 → 커버리지 리포트
+tsma list [--status S] [--sort F]            함수 목록 + 상태 조감도
+tsma status [--func F]                       진행률 요약 또는 함수별 상세
+tsma graph [--func F] [--dead]               call graph 조회
+tsma reset [<func> | --all]                  함수 또는 세션 초기화
 ```
 
-## Workflow
+## 워크플로우
 
-1. `tsma next` -- get the next endpoint and its function call chain
-2. Read the chain functions, write a test covering all branches
-3. `tsma submit <endpoint> <test-file>` -- submit for validation
-4. If PARTIAL, check uncovered branches and improve the test
-5. Repeat until all endpoints are DONE
+```
+tsma next → 테스트 없는 함수 1개 제시
+         → LLM이 테스트 작성
+         → tsma submit으로 검증
+         → 반복
+```
+
+## 함수 상태
+
+| 상태 | 의미 |
+|---|---|
+| **TODO** | 테스트 없음 |
+| **PARTIAL** | 테스트 있으나 커버리지 개선 여지 있음 |
+| **DONE** | 테스트 pass + 분기 커버리지 100% |
+| **CAPPED** | LLM 재시도로 커버리지가 더 이상 오르지 않음. 현재 코드 구조의 한계 |
+
+### CAPPED 판정
+
+커버리지 100%가 게이트가 아닌 이유: DI 없는 레거시 코드에서 외부 의존성 분기는 원본 코드 변경 없이 유발 불가. "원본을 안 건드린다"는 전제와 "100% 강제"는 양립 불가능하다.
+
+```
+정적 분석에서 100% 불가 판정 → LLM 1회 시도 → 즉시 CAPPED
+정적 분석에서 미결정        → LLM 3회 재시도 실패 → CAPPED
+```
+
+`--model` 플래그로 어떤 LLM이 시도했는지 기록. 서로 다른 모델이 시도해도 커버리지가 안 오르면 코드 구조의 한계로 판정.
+
+## 설계 문서
+
+상세 설계: `~/.clari/repos/fullend/files/testmaster-설계.md`

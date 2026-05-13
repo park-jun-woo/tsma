@@ -55,8 +55,8 @@ func TestSaveAndLoad(t *testing.T) {
 	if len(loaded.Functions) != 2 {
 		t.Errorf("Functions count = %d, want 2", len(loaded.Functions))
 	}
-	if loaded.Summary.Testable != 2 {
-		t.Errorf("Summary.Testable = %d, want 2", loaded.Summary.Testable)
+	if loaded.Summary.Total != 2 {
+		t.Errorf("Summary.Total = %d, want 2", loaded.Summary.Total)
 	}
 	if loaded.Summary.Done != 1 {
 		t.Errorf("Summary.Done = %d, want 1", loaded.Summary.Done)

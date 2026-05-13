@@ -15,9 +15,7 @@ func buildGoFunction(fd *ast.FuncDecl, fset *token.FileSet, relPath, pkgDir stri
 	name := fd.Name.Name
 
 	var receiver string
-	isMethod := false
 	if fd.Recv != nil && len(fd.Recv.List) > 0 {
-		isMethod = true
 		receiver = extractReceiver(fd.Recv.List[0].Type)
 	}
 
@@ -30,11 +28,7 @@ func buildGoFunction(fd *ast.FuncDecl, fset *token.FileSet, relPath, pkgDir stri
 		File:          relPath,
 		StartLine:     fset.Position(fd.Pos()).Line,
 		EndLine:       fset.Position(fd.End()).Line,
-		IsMethod:      isMethod,
-		Receiver:      receiver,
 		Exported:      exported,
-		EntryPoint:    false,
-		Dead:          false,
 		Status:        model.StatusTodo,
 	}
 }

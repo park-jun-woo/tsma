@@ -106,9 +106,6 @@ func handleLogin() {
 		if found.Exported {
 			t.Error("handleLogin should not be exported")
 		}
-		if found.IsMethod {
-			t.Error("handleLogin should not be a method")
-		}
 	}
 }
 
@@ -146,12 +143,6 @@ func helperFunc() string {
 	if login == nil {
 		t.Fatal("expected to find 'internal/api.Handler.Login'")
 	}
-	if !login.IsMethod {
-		t.Error("Login should be a method")
-	}
-	if login.Receiver != "Handler" {
-		t.Errorf("Login receiver = %q, want \"Handler\"", login.Receiver)
-	}
 	if !login.Exported {
 		t.Error("Login should be exported")
 	}
@@ -164,9 +155,6 @@ func helperFunc() string {
 	helper := findByQualifiedName(funcs, "internal/api.helperFunc")
 	if helper == nil {
 		t.Fatal("expected to find 'internal/api.helperFunc'")
-	}
-	if helper.IsMethod {
-		t.Error("helperFunc should not be a method")
 	}
 	if helper.Exported {
 		t.Error("helperFunc should not be exported")
@@ -358,12 +346,6 @@ func TestTSIndexerClassMethods(t *testing.T) {
 	if login == nil {
 		t.Fatal("expected to find 'login'")
 	}
-	if !login.IsMethod {
-		t.Error("login should be a method")
-	}
-	if login.Receiver != "AuthService" {
-		t.Errorf("login.Receiver = %q, want \"AuthService\"", login.Receiver)
-	}
 	if login.QualifiedName != "src/auth.AuthService.login" {
 		t.Errorf("login.QualifiedName = %q, want \"src/auth.AuthService.login\"", login.QualifiedName)
 	}
@@ -504,12 +486,6 @@ def standalone():
 	if login == nil {
 		t.Fatal("expected to find 'login'")
 	}
-	if !login.IsMethod {
-		t.Error("login should be a method")
-	}
-	if login.Receiver != "AuthService" {
-		t.Errorf("login.Receiver = %q, want \"AuthService\"", login.Receiver)
-	}
 	if login.QualifiedName != "services.AuthService.login" {
 		t.Errorf("login.QualifiedName = %q, want \"services.AuthService.login\"", login.QualifiedName)
 	}
@@ -517,9 +493,6 @@ def standalone():
 	standalone := findByName(funcs, "standalone")
 	if standalone == nil {
 		t.Fatal("expected to find 'standalone'")
-	}
-	if standalone.IsMethod {
-		t.Error("standalone should not be a method")
 	}
 }
 

@@ -1,5 +1,5 @@
-//ff:func feature=cli type=helper control=iteration dimension=1
-//ff:what Performs initial project analysis: detect language, index functions, build call graph
+//ff:func feature=cli type=helper control=sequence
+//ff:what Performs initial project analysis: detect language and index functions
 package cli
 
 import (
@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/park-jun-woo/tsma/internal/detect"
-	"github.com/park-jun-woo/tsma/internal/graph"
 	"github.com/park-jun-woo/tsma/internal/index"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
@@ -31,29 +30,14 @@ func analyzeProject(projectRoot string) (*model.Session, error) {
 	}
 	fmt.Fprintf(os.Stderr, "Found %d functions\n", len(functions))
 
-	// Step 3: Build call graph.
-	fmt.Fprintln(os.Stderr, "Building call graph...")
-	bldr := graph.NewBuilder(lf.Lang)
-	functions, gs, err := bldr.Build(projectRoot, functions)
-	if err != nil {
-		return nil, fmt.Errorf("build call graph: %w", err)
-	}
-	fmt.Fprintf(os.Stderr, "Graph: %d nodes, %d edges, %d entry points, %d dead\n",
-		gs.Nodes, gs.Edges, gs.EntryPoints, gs.Dead)
-
-	// Step 4: Set initial status for all functions.
-	for i := range functions {
-		if functions[i].Status == "" {
-			functions[i].Status = model.StatusTodo
-		}
-	}
+	// Step 3: Set initial status for all functions.
+	setInitialStatus(functions)
 
 	sess := &model.Session{
 		Project:   projectRoot,
 		Lang:      lf.Lang,
 		Created:   time.Now(),
 		Functions: functions,
-		Graph:     gs,
 	}
 	sess.RecalcSummary()
 

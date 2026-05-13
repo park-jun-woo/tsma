@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Shows overall progress summary or detailed status for a specific function
+//ff:what Shows overall progress summary
 package cli
 
 import (
@@ -9,18 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var statusFunc string
-
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show overall progress or detailed status of a specific function",
-	Long: `Show overall progress summary (testable/done/partial/todo counts and percentages),
-or detailed coverage info for a specific function with --func.`,
-	RunE: runStatus,
-}
-
-func init() {
-	statusCmd.Flags().StringVar(&statusFunc, "func", "", "show detailed status for a specific function")
+	Short: "Show overall progress summary",
+	Long:  `Show overall progress summary (total/done/partial/todo counts and percentages).`,
+	RunE:  runStatus,
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -37,31 +30,17 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load session: %w", err)
 	}
 
-	if statusFunc != "" {
-		fn := sess.FindFunction(statusFunc)
-		if fn == nil {
-			return fmt.Errorf("function not found: %s", statusFunc)
-		}
-		printFuncDetail(fn)
-		return nil
-	}
-
-	// Overall summary.
 	s := sess.Summary
-	testable := float64(s.Testable)
-	if testable == 0 {
-		fmt.Println("No testable functions found.")
+	total := float64(s.Total)
+	if total == 0 {
+		fmt.Println("No functions found.")
 		return nil
 	}
 
-	fmt.Printf("%d testable functions\n", s.Testable)
-	fmt.Printf("DONE:    %3d (%.1f%%)\n", s.Done, float64(s.Done)/testable*100)
-	fmt.Printf("PARTIAL: %3d (%.1f%%)\n", s.Partial, float64(s.Partial)/testable*100)
-	fmt.Printf("TODO:    %3d (%.1f%%)\n", s.Todo, float64(s.Todo)/testable*100)
-
-	g := sess.Graph
-	fmt.Printf("\nCall graph: %d nodes, %d edges, %d entry points, %d dead\n",
-		g.Nodes, g.Edges, g.EntryPoints, g.Dead)
+	fmt.Printf("%d functions\n", s.Total)
+	fmt.Printf("DONE:    %3d (%.1f%%)\n", s.Done, float64(s.Done)/total*100)
+	fmt.Printf("PARTIAL: %3d (%.1f%%)\n", s.Partial, float64(s.Partial)/total*100)
+	fmt.Printf("TODO:    %3d (%.1f%%)\n", s.Todo, float64(s.Todo)/total*100)
 
 	return nil
 }

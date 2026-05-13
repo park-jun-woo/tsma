@@ -16,9 +16,9 @@ var Version = "dev"
 var rootCmd = &cobra.Command{
 	Use:   "tsma",
 	Short: "Function-level test coverage tracker for legacy codebases",
-	Long: `TestMaster manages function-level test extraction from legacy codebases.
-It indexes all functions, builds a call graph, prioritizes by incoming edges,
-validates submitted tests, and tracks branch coverage progress.`,
+	Long: `TestMaster tracks function-level test coverage for legacy codebases.
+It indexes all functions, shows untested ones, validates submitted tests,
+and tracks branch coverage progress.`,
 	Version: Version,
 }
 
@@ -37,6 +37,5 @@ func init() {
 	rootCmd.AddCommand(submitCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(resetCmd)
 }

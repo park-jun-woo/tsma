@@ -62,6 +62,7 @@ func runReset(cmd *cobra.Command, args []string) error {
 	fn.TestFile = ""
 	fn.CoveragePct = 0
 	fn.UncoveredBranches = nil
+	fn.RetryCount = 0
 	sess.RecalcSummary()
 
 	if err := session.Save(root, sess); err != nil {

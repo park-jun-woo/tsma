@@ -8,15 +8,10 @@ type Function struct {
 	File              string  `json:"file"`
 	StartLine         int     `json:"start_line"`
 	EndLine           int     `json:"end_line"`
-	IsMethod          bool    `json:"is_method"`
-	Receiver          string  `json:"receiver,omitempty"`
 	Exported          bool    `json:"exported"`
-	EntryPoint        bool    `json:"entry_point"`
-	Dead              bool    `json:"dead"`
-	Callers           []Edge  `json:"callers"`
-	Callees           []Edge  `json:"callees"`
 	Status            string  `json:"status"`
 	TestFile          string  `json:"test_file,omitempty"`
 	CoveragePct       float64 `json:"coverage_pct,omitempty"`
 	UncoveredBranches []int   `json:"uncovered_branches,omitempty"`
+	RetryCount        int     `json:"retry_count,omitempty"`
 }
