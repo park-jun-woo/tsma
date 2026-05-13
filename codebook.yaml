@@ -1,0 +1,22 @@
+required:
+  feature:
+    detect: "language and framework detection"
+    endpoint: "API endpoint discovery from source code"
+    chain: "function call chain tracing"
+    runner: "test execution against original code"
+    coverage: "branch coverage analysis"
+    session: "persistent session state management"
+    cli: "CLI command orchestration"
+    model: "core data structures"
+  type:
+    command: "cobra CLI command entrypoint"
+    implementation: "language-specific feature implementation"
+    factory: "interface definition + factory dispatch"
+    helper: "internal utility function"
+    model: "data type definition"
+
+optional:
+  lang:
+    go: "Go language support"
+    typescript: "TypeScript language support"
+    python: "Python language support"
