@@ -4,7 +4,7 @@ package coverage
 
 import "github.com/park-jun-woo/tsma/internal/model"
 
-// Checker verifies branch coverage for an endpoint.
+// Checker verifies branch coverage for a function.
 type Checker interface {
-	Check(projectRoot, testFile string, ep *model.Endpoint) (*Report, error)
+	Check(projectRoot, testFile string, fn *model.Function) (*Report, error)
 }

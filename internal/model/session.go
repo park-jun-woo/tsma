@@ -4,12 +4,11 @@ package model
 
 import "time"
 
-// Session represents the persistent state for a project.
 type Session struct {
-	Project   string     `json:"project"`
-	Lang      string     `json:"lang"`
-	Framework string     `json:"framework"`
-	Created   time.Time  `json:"created"`
-	Endpoints []Endpoint `json:"endpoints"`
-	Summary   Summary    `json:"summary"`
+	Project   string       `json:"project"`
+	Lang      string       `json:"lang"`
+	Created   time.Time    `json:"created"`
+	Functions []Function   `json:"functions"`
+	Graph     GraphSummary `json:"graph"`
+	Summary   Summary      `json:"summary"`
 }

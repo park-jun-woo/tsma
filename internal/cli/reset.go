@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Resets an endpoint to TODO or deletes the entire session
+//ff:what Resets a function to TODO or deletes the entire session
 package cli
 
 import (
@@ -13,9 +13,9 @@ import (
 var resetAll bool
 
 var resetCmd = &cobra.Command{
-	Use:   "reset [endpoint]",
-	Short: "Reset an endpoint to TODO or delete the entire session",
-	Long: `Reset a specific endpoint to TODO status, or use --all to delete the entire
+	Use:   "reset [func-name]",
+	Short: "Reset a function to TODO or delete the entire session",
+	Long: `Reset a specific function to TODO status, or use --all to delete the entire
 session. After --all, the next 'tsma next' will re-analyze the project.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runReset,
@@ -40,10 +40,10 @@ func runReset(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("specify an endpoint name or use --all")
+		return fmt.Errorf("specify a function name or use --all")
 	}
 
-	endpointName := args[0]
+	funcName := args[0]
 
 	if !session.Exists(root) {
 		return fmt.Errorf("no session found — nothing to reset")
@@ -53,15 +53,15 @@ func runReset(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load session: %w", err)
 	}
 
-	ep := sess.FindEndpoint(endpointName)
-	if ep == nil {
-		return fmt.Errorf("endpoint not found: %s", endpointName)
+	fn := sess.FindFunction(funcName)
+	if fn == nil {
+		return fmt.Errorf("function not found: %s", funcName)
 	}
 
-	ep.Status = model.StatusTodo
-	ep.TestFile = ""
-	ep.Coverage = nil
-	ep.UncoveredBranches = nil
+	fn.Status = model.StatusTodo
+	fn.TestFile = ""
+	fn.CoveragePct = 0
+	fn.UncoveredBranches = nil
 	sess.RecalcSummary()
 
 	if err := session.Save(root, sess); err != nil {
@@ -69,6 +69,6 @@ func runReset(cmd *cobra.Command, args []string) error {
 	}
 
 	remaining := sess.Summary.Todo + sess.Summary.Partial
-	fmt.Printf("%s reset to TODO (%d remaining)\n", endpointName, remaining)
+	fmt.Printf("%s reset to TODO (%d remaining)\n", funcName, remaining)
 	return nil
 }

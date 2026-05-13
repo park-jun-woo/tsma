@@ -15,10 +15,10 @@ var Version = "dev"
 // rootCmd is the top-level command.
 var rootCmd = &cobra.Command{
 	Use:   "tsma",
-	Short: "Extract tests from legacy code with LLM agents",
-	Long: `TestMaster manages endpoint-level test extraction from legacy codebases.
-It detects endpoints, traces function call chains, validates submitted tests,
-and tracks branch coverage progress.`,
+	Short: "Function-level test coverage tracker for legacy codebases",
+	Long: `TestMaster manages function-level test extraction from legacy codebases.
+It indexes all functions, builds a call graph, prioritizes by incoming edges,
+validates submitted tests, and tracks branch coverage progress.`,
 	Version: Version,
 }
 
@@ -37,5 +37,6 @@ func init() {
 	rootCmd.AddCommand(submitCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(resetCmd)
 }

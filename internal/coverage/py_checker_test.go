@@ -124,51 +124,33 @@ func TestMatchesPyPathDifferentDir(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCollectPyRanges(t *testing.T) {
-	ep := &model.Endpoint{
-		Name: "CreateOrder",
-		Handler: model.FuncLocation{
-			File:      "handlers/order.py",
-			StartLine: 10,
-			EndLine:   40,
-		},
-		Chain: []model.ChainEntry{
-			{Func: "validate_order", File: "services/validator.py", StartLine: 5, EndLine: 25},
-			{Func: "save_to_db", File: "repo/order.py", StartLine: 10, EndLine: 50, Boundary: "db"},
-			{Func: "format_response", File: "helpers/format.py", StartLine: 1, EndLine: 15},
-		},
+	fn := &model.Function{
+		Name:      "CreateOrder",
+		File:      "handlers/order.py",
+		StartLine: 10,
+		EndLine:   40,
 	}
 
-	ranges := collectPyRanges(ep)
+	ranges := collectPyRanges(fn)
 
-	// Handler + 2 chain entries without boundary (save_to_db has boundary "db", excluded).
-	if len(ranges) != 3 {
-		t.Fatalf("got %d ranges, want 3", len(ranges))
+	if len(ranges) != 1 {
+		t.Fatalf("got %d ranges, want 1", len(ranges))
 	}
 
 	if ranges[0].file != "handlers/order.py" || ranges[0].funcName != "CreateOrder" {
-		t.Errorf("ranges[0] = {file: %q, func: %q}, want handler entry", ranges[0].file, ranges[0].funcName)
+		t.Errorf("ranges[0] = {file: %q, func: %q}, want function entry", ranges[0].file, ranges[0].funcName)
 	}
 	if ranges[0].startLine != 10 || ranges[0].endLine != 40 {
 		t.Errorf("ranges[0] lines = %d-%d, want 10-40", ranges[0].startLine, ranges[0].endLine)
 	}
-
-	if ranges[1].file != "services/validator.py" || ranges[1].funcName != "validate_order" {
-		t.Errorf("ranges[1] = {file: %q, func: %q}, want validate_order", ranges[1].file, ranges[1].funcName)
-	}
-
-	if ranges[2].file != "helpers/format.py" || ranges[2].funcName != "format_response" {
-		t.Errorf("ranges[2] = {file: %q, func: %q}, want format_response", ranges[2].file, ranges[2].funcName)
-	}
 }
 
-func TestCollectPyRangesEmptyEndpoint(t *testing.T) {
-	ep := &model.Endpoint{
-		Name:    "Empty",
-		Handler: model.FuncLocation{},
-		Chain:   nil,
+func TestCollectPyRangesEmptyFile(t *testing.T) {
+	fn := &model.Function{
+		Name: "Empty",
 	}
 
-	ranges := collectPyRanges(ep)
+	ranges := collectPyRanges(fn)
 	if len(ranges) != 0 {
 		t.Errorf("expected empty ranges, got %d", len(ranges))
 	}

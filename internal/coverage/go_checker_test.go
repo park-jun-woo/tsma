@@ -97,7 +97,7 @@ func TestNewCheckerUnsupported(t *testing.T) {
 		t.Errorf("UnsupportedChecker.Lang = %q, want %q", u.Lang, "rust")
 	}
 
-	_, err := c.Check("/tmp", "main_test.rs", &model.Endpoint{})
+	_, err := c.Check("/tmp", "main_test.rs", &model.Function{})
 	if err == nil {
 		t.Fatal("UnsupportedChecker.Check should return an error")
 	}
@@ -117,79 +117,35 @@ func TestNewCheckerUnsupported(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCollectRanges(t *testing.T) {
-	ep := &model.Endpoint{
-		Name: "GetUser",
-		Handler: model.FuncLocation{
-			File:      "internal/handler/user.go",
-			StartLine: 10,
-			EndLine:   30,
-		},
-		Chain: []model.ChainEntry{
-			{Func: "ValidateUserID", File: "internal/service/user.go", StartLine: 5, EndLine: 20},
-			{Func: "QueryDB", File: "internal/repo/user.go", StartLine: 15, EndLine: 40, Boundary: "db"},
-			{Func: "FormatResponse", File: "internal/handler/format.go", StartLine: 1, EndLine: 10},
-		},
+	fn := &model.Function{
+		Name:      "GetUser",
+		File:      "internal/handler/user.go",
+		StartLine: 10,
+		EndLine:   30,
 	}
 
-	ranges := collectRanges(ep)
+	ranges := collectRanges(fn)
 
-	// Handler + 2 chain entries without boundary (QueryDB has boundary "db", excluded).
-	if len(ranges) != 3 {
-		t.Fatalf("got %d ranges, want 3", len(ranges))
+	if len(ranges) != 1 {
+		t.Fatalf("got %d ranges, want 1", len(ranges))
 	}
 
-	// Check handler.
 	if ranges[0].file != "internal/handler/user.go" || ranges[0].funcName != "GetUser" {
-		t.Errorf("ranges[0] = {file: %q, func: %q}, want handler", ranges[0].file, ranges[0].funcName)
+		t.Errorf("ranges[0] = {file: %q, func: %q}, want function", ranges[0].file, ranges[0].funcName)
 	}
 	if ranges[0].startLine != 10 || ranges[0].endLine != 30 {
 		t.Errorf("ranges[0] lines = %d-%d, want 10-30", ranges[0].startLine, ranges[0].endLine)
 	}
-
-	// Check non-boundary chain entry.
-	if ranges[1].file != "internal/service/user.go" || ranges[1].funcName != "ValidateUserID" {
-		t.Errorf("ranges[1] = {file: %q, func: %q}, want ValidateUserID", ranges[1].file, ranges[1].funcName)
-	}
-
-	if ranges[2].file != "internal/handler/format.go" || ranges[2].funcName != "FormatResponse" {
-		t.Errorf("ranges[2] = {file: %q, func: %q}, want FormatResponse", ranges[2].file, ranges[2].funcName)
-	}
 }
 
-func TestCollectRangesEmptyEndpoint(t *testing.T) {
-	ep := &model.Endpoint{
-		Name:    "Empty",
-		Handler: model.FuncLocation{},
-		Chain:   nil,
+func TestCollectRangesEmptyFile(t *testing.T) {
+	fn := &model.Function{
+		Name: "Empty",
 	}
 
-	ranges := collectRanges(ep)
+	ranges := collectRanges(fn)
 	if len(ranges) != 0 {
 		t.Errorf("expected empty ranges, got %d", len(ranges))
-	}
-}
-
-func TestCollectRangesOnlyBoundaryChain(t *testing.T) {
-	ep := &model.Endpoint{
-		Name: "BoundaryOnly",
-		Handler: model.FuncLocation{
-			File:      "handler.go",
-			StartLine: 1,
-			EndLine:   10,
-		},
-		Chain: []model.ChainEntry{
-			{Func: "QueryDB", File: "repo.go", StartLine: 1, EndLine: 20, Boundary: "db"},
-			{Func: "CallAPI", File: "client.go", StartLine: 1, EndLine: 30, Boundary: "http"},
-		},
-	}
-
-	ranges := collectRanges(ep)
-	// Only handler (both chain entries have boundary).
-	if len(ranges) != 1 {
-		t.Fatalf("got %d ranges, want 1 (only handler)", len(ranges))
-	}
-	if ranges[0].funcName != "BoundaryOnly" {
-		t.Errorf("ranges[0].funcName = %q, want %q", ranges[0].funcName, "BoundaryOnly")
 	}
 }
 

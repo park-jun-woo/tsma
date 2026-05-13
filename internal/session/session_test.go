@@ -13,22 +13,25 @@ func TestSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 
 	sess := &model.Session{
-		Project:   dir,
-		Lang:      "go",
-		Framework: "gin",
-		Created:   time.Now(),
-		Endpoints: []model.Endpoint{
+		Project: dir,
+		Lang:    "go",
+		Created: time.Now(),
+		Functions: []model.Function{
 			{
-				Name:   "Login",
-				Method: "POST",
-				Path:   "/api/login",
-				Status: model.StatusTodo,
+				QualifiedName: "pkg.Login",
+				Name:          "Login",
+				File:          "handler.go",
+				StartLine:     10,
+				EndLine:       30,
+				Status:        model.StatusTodo,
 			},
 			{
-				Name:   "Signup",
-				Method: "POST",
-				Path:   "/api/signup",
-				Status: model.StatusDone,
+				QualifiedName: "pkg.Signup",
+				Name:          "Signup",
+				File:          "handler.go",
+				StartLine:     35,
+				EndLine:       60,
+				Status:        model.StatusDone,
 			},
 		},
 	}
@@ -49,14 +52,17 @@ func TestSaveAndLoad(t *testing.T) {
 	if loaded.Lang != "go" {
 		t.Errorf("Lang = %q, want go", loaded.Lang)
 	}
-	if len(loaded.Endpoints) != 2 {
-		t.Errorf("Endpoints count = %d, want 2", len(loaded.Endpoints))
+	if len(loaded.Functions) != 2 {
+		t.Errorf("Functions count = %d, want 2", len(loaded.Functions))
 	}
-	if loaded.Summary.Total != 2 {
-		t.Errorf("Summary.Total = %d, want 2", loaded.Summary.Total)
+	if loaded.Summary.Testable != 2 {
+		t.Errorf("Summary.Testable = %d, want 2", loaded.Summary.Testable)
 	}
 	if loaded.Summary.Done != 1 {
 		t.Errorf("Summary.Done = %d, want 1", loaded.Summary.Done)
+	}
+	if loaded.Summary.Todo != 1 {
+		t.Errorf("Summary.Todo = %d, want 1", loaded.Summary.Todo)
 	}
 }
 

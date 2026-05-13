@@ -1,5 +1,5 @@
 //ff:func feature=coverage type=implementation control=sequence
-//ff:what Runs go test with coverprofile and computes per-function coverage for the endpoint
+//ff:what Runs go test with coverprofile and computes per-function coverage
 package coverage
 
 import (
@@ -12,7 +12,7 @@ import (
 )
 
 // Check runs go test with coverage and parses the profile.
-func (c *GoChecker) Check(projectRoot, testFile string, ep *model.Endpoint) (*Report, error) {
+func (c *GoChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
 	absTest, err := filepath.Abs(testFile)
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)
@@ -45,7 +45,7 @@ func (c *GoChecker) Check(projectRoot, testFile string, ep *model.Endpoint) (*Re
 		return nil, fmt.Errorf("parse coverage profile: %w", err)
 	}
 
-	ranges := collectRanges(ep)
+	ranges := collectRanges(fn)
 
 	return buildGoReport(ranges, blocks, projectRoot), nil
 }

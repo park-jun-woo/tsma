@@ -1,5 +1,5 @@
-//ff:func feature=cli type=command control=iteration dimension=1
-//ff:what Runs the 'list' command showing all endpoints with pagination
+//ff:func feature=cli type=command control=sequence
+//ff:what Lists all functions with pagination, status filtering, and sorting
 package cli
 
 import (
@@ -11,21 +11,25 @@ import (
 )
 
 var (
-	listPage int
-	listSize int
+	listPage   int
+	listSize   int
+	listStatus string
+	listSort   string
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all endpoints with their progress status",
-	Long: `List all endpoints with their current status (DONE/PARTIAL/TODO).
-Supports pagination with --page and --size flags.`,
+	Short: "List all functions with their progress status",
+	Long: `List all functions with their current status (DONE/PARTIAL/TODO).
+Supports pagination, status filtering, and sorting.`,
 	RunE: runList,
 }
 
 func init() {
 	listCmd.Flags().IntVar(&listPage, "page", 1, "page number (1-based)")
 	listCmd.Flags().IntVar(&listSize, "size", 20, "items per page")
+	listCmd.Flags().StringVar(&listStatus, "status", "", "filter by status: todo, partial, done, dead")
+	listCmd.Flags().StringVar(&listSort, "sort", "priority", "sort by: priority, name, file")
 }
 
 func runList(cmd *cobra.Command, args []string) error {
@@ -42,12 +46,28 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load session: %w", err)
 	}
 
+	// Filter functions.
+	statusFilter := strings.ToLower(listStatus)
+	filtered, err := filterFunctions(sess.Functions, statusFilter)
+	if err != nil {
+		return err
+	}
+
+	// Sort functions.
+	if err := sortFunctions(filtered, strings.ToLower(listSort)); err != nil {
+		return err
+	}
+
 	// Print summary header.
-	fmt.Printf("%d endpoints — DONE: %d | PARTIAL: %d | TODO: %d\n\n",
-		sess.Summary.Total, sess.Summary.Done, sess.Summary.Partial, sess.Summary.Todo)
+	if statusFilter == "dead" {
+		fmt.Printf("%d dead functions\n\n", len(filtered))
+	} else {
+		fmt.Printf("%d functions — DONE: %d | PARTIAL: %d | TODO: %d\n\n",
+			sess.Summary.Testable, sess.Summary.Done, sess.Summary.Partial, sess.Summary.Todo)
+	}
 
 	// Calculate pagination.
-	total := len(sess.Endpoints)
+	total := len(filtered)
 	if listPage < 1 {
 		listPage = 1
 	}
@@ -56,7 +76,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 	start := (listPage - 1) * listSize
 	if start >= total {
-		fmt.Println("(no endpoints on this page)")
+		fmt.Println("(no functions on this page)")
 		return nil
 	}
 	end := start + listSize
@@ -64,29 +84,9 @@ func runList(cmd *cobra.Command, args []string) error {
 		end = total
 	}
 
-	// Find the longest endpoint name for alignment.
-	maxName := 0
-	for _, ep := range sess.Endpoints[start:end] {
-		if len(ep.Name) > maxName {
-			maxName = len(ep.Name)
-		}
-	}
-
-	// Print endpoints.
-	for _, ep := range sess.Endpoints[start:end] {
-		status := strings.ToUpper(ep.Status)
-		extra := ""
-		if ep.Status != "partial" || len(ep.UncoveredBranches) == 0 {
-			fmt.Printf("  %-*s  %s%s\n", maxName, ep.Name, status, extra)
-			continue
-		}
-		lines := make([]string, 0, len(ep.UncoveredBranches))
-		for _, l := range ep.UncoveredBranches {
-			lines = append(lines, fmt.Sprintf("%d", l))
-		}
-		extra = fmt.Sprintf(" (uncovered: line %s)", strings.Join(lines, ", "))
-		fmt.Printf("  %-*s  %s%s\n", maxName, ep.Name, status, extra)
-	}
+	page := filtered[start:end]
+	maxName := maxFuncNameLen(page)
+	printFuncList(page, maxName)
 
 	// Print pagination info.
 	totalPages := (total + listSize - 1) / listSize

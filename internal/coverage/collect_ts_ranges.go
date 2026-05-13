@@ -1,32 +1,18 @@
-//ff:func feature=coverage type=helper control=iteration dimension=1
-//ff:what Collects handler and chain function file/line ranges for TS coverage analysis
+//ff:func feature=coverage type=helper control=sequence
+//ff:what Extracts TS function range from a single Function
 package coverage
 
 import "github.com/park-jun-woo/tsma/internal/model"
 
-// collectTSRanges extracts function ranges from an endpoint's handler and chain.
-func collectTSRanges(ep *model.Endpoint) []tsFuncRange {
-	var ranges []tsFuncRange
-
-	if ep.Handler.File != "" {
-		ranges = append(ranges, tsFuncRange{
-			file:      ep.Handler.File,
-			startLine: ep.Handler.StartLine,
-			endLine:   ep.Handler.EndLine,
-			funcName:  ep.Name,
-		})
+// collectTSRanges extracts function range from the function.
+func collectTSRanges(fn *model.Function) []tsFuncRange {
+	if fn.File == "" {
+		return nil
 	}
-
-	for _, ce := range ep.Chain {
-		if ce.File != "" && ce.Boundary == "" {
-			ranges = append(ranges, tsFuncRange{
-				file:      ce.File,
-				startLine: ce.StartLine,
-				endLine:   ce.EndLine,
-				funcName:  ce.Func,
-			})
-		}
-	}
-
-	return ranges
+	return []tsFuncRange{{
+		file:      fn.File,
+		startLine: fn.StartLine,
+		endLine:   fn.EndLine,
+		funcName:  fn.Name,
+	}}
 }

@@ -1,10 +1,11 @@
-//ff:func feature=cli type=command control=iteration dimension=1
-//ff:what Shows the next incomplete endpoint with its function call chain
+//ff:func feature=cli type=command control=sequence
+//ff:what Shows the next incomplete function prioritized by incoming edges
 package cli
 
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/park-jun-woo/tsma/internal/model"
 	"github.com/park-jun-woo/tsma/internal/session"
@@ -13,10 +14,10 @@ import (
 
 var nextCmd = &cobra.Command{
 	Use:   "next",
-	Short: "Show the next incomplete endpoint with its function call chain",
-	Long: `Show the next incomplete endpoint (TODO or PARTIAL) along with its function
-call chain. If no session exists, automatically analyze the project first
-(language detection, endpoint discovery, AST chain tracing).`,
+	Short: "Show the next incomplete function to test",
+	Long: `Show the next incomplete function (TODO or PARTIAL) prioritized by incoming
+edges (callers). If no session exists, automatically analyze the project first
+(language detection, function indexing, call graph building).`,
 	RunE: runNext,
 }
 
@@ -43,50 +44,52 @@ func runNext(cmd *cobra.Command, args []string) error {
 		if err := session.Save(root, sess); err != nil {
 			return fmt.Errorf("save session: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "Session created: %d endpoints detected (%s/%s)\n\n",
-			len(sess.Endpoints), sess.Lang, sess.Framework)
+		fmt.Fprintf(os.Stderr, "Session created: %d functions indexed (%s)\n\n",
+			len(sess.Functions), sess.Lang)
 	}
 
-	// Find the next TODO or PARTIAL endpoint.
-	var next *model.Endpoint
-	for i := range sess.Endpoints {
-		ep := &sess.Endpoints[i]
-		if ep.Status != model.StatusTodo && ep.Status != model.StatusPartial {
-			continue
-		}
-		next = ep
-		break
-	}
+	// Collect incomplete functions (exclude dead code).
+	candidates := collectIncomplete(sess.Functions)
 
-	if next == nil {
-		fmt.Println("All endpoints are DONE!")
+	if len(candidates) == 0 {
+		fmt.Println("All functions are DONE!")
 		return nil
 	}
 
-	// Print endpoint info.
+	// Sort by priority: incoming edges desc, leaf functions first, then file path.
+	sort.Slice(candidates, func(i, j int) bool {
+		ci := len(candidates[i].Callers)
+		cj := len(candidates[j].Callers)
+		if ci != cj {
+			return ci > cj
+		}
+		li := len(candidates[i].Callees) == 0
+		lj := len(candidates[j].Callees) == 0
+		if li != lj {
+			return li
+		}
+		if candidates[i].File != candidates[j].File {
+			return candidates[i].File < candidates[j].File
+		}
+		return candidates[i].StartLine < candidates[j].StartLine
+	})
+
+	next := &candidates[0]
+
+	// Print function info.
 	statusLabel := "TODO"
 	if next.Status == model.StatusPartial {
 		statusLabel = "PARTIAL"
 	}
-	fmt.Printf("%s\t%s\n", next.Name, statusLabel)
-	if next.Method != "" || next.Path != "" {
-		fmt.Printf("%s %s\n", next.Method, next.Path)
-	}
-	fmt.Printf("handler: %s:%d-%d\n", next.Handler.File, next.Handler.StartLine, next.Handler.EndLine)
+	fmt.Printf("%s  %s  (priority: %d callers)\n", next.Name, statusLabel, len(next.Callers))
+	fmt.Printf("  file: %s:%d-%d\n", next.File, next.StartLine, next.EndLine)
 
-	if len(next.Chain) == 0 {
-		return nil
+	if len(next.Callers) > 0 {
+		printNextCallers(next.Callers, 3, sess)
 	}
 
-	fmt.Println("chain:")
-	for _, ce := range next.Chain {
-		if ce.File != "" {
-			fmt.Printf("  -> %-30s %s:%d-%d\n", ce.Func+"()", ce.File, ce.StartLine, ce.EndLine)
-			continue
-		}
-		if ce.Boundary != "" {
-			fmt.Printf("  -> %-30s (%s)\n", ce.Func+"()", ce.Boundary)
-		}
+	if len(next.Callees) > 0 {
+		printNextCallees(next.Callees, sess)
 	}
 
 	return nil

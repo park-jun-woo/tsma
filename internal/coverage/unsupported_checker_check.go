@@ -5,6 +5,6 @@ package coverage
 import "github.com/park-jun-woo/tsma/internal/model"
 
 // Check returns an error for unsupported languages.
-func (c *UnsupportedChecker) Check(_, _ string, _ *model.Endpoint) (*Report, error) {
+func (c *UnsupportedChecker) Check(_, _ string, _ *model.Function) (*Report, error) {
 	return nil, &ErrUnsupported{Lang: c.Lang}
 }

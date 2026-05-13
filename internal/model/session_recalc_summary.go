@@ -1,12 +1,15 @@
-//ff:func feature=model type=implementation control=iteration
-//ff:what Recomputes the summary counts from endpoint statuses
+//ff:func feature=model type=implementation control=iteration dimension=1
+//ff:what Recomputes the summary counts from function statuses
 package model
 
-// RecalcSummary recomputes the summary from endpoints.
 func (s *Session) RecalcSummary() {
-	s.Summary = Summary{Total: len(s.Endpoints)}
-	for _, ep := range s.Endpoints {
-		switch ep.Status {
+	s.Summary = Summary{}
+	for _, fn := range s.Functions {
+		if fn.Dead {
+			continue
+		}
+		s.Summary.Testable++
+		switch fn.Status {
 		case StatusDone:
 			s.Summary.Done++
 		case StatusPartial:

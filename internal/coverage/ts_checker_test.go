@@ -116,56 +116,35 @@ func TestParseCoverageFinalJSONInvalid(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCollectTSRanges(t *testing.T) {
-	ep := &model.Endpoint{
-		Name: "CreateUser",
-		Handler: model.FuncLocation{
-			File:      "src/handlers/user.ts",
-			StartLine: 10,
-			EndLine:   30,
-		},
-		Chain: []model.ChainEntry{
-			{Func: "validateInput", File: "src/services/validator.ts", StartLine: 5, EndLine: 20},
-			{Func: "insertDB", File: "src/repo/user.ts", StartLine: 15, EndLine: 40, Boundary: "db"},
-			{Func: "formatResponse", File: "src/helpers/format.ts", StartLine: 1, EndLine: 10},
-		},
+	fn := &model.Function{
+		Name:      "CreateUser",
+		File:      "src/handlers/user.ts",
+		StartLine: 10,
+		EndLine:   30,
 	}
 
-	ranges := collectTSRanges(ep)
+	ranges := collectTSRanges(fn)
 
-	// Handler + 2 chain entries without boundary (insertDB has boundary "db", so excluded).
-	if len(ranges) != 3 {
-		t.Fatalf("got %d ranges, want 3", len(ranges))
+	if len(ranges) != 1 {
+		t.Fatalf("got %d ranges, want 1", len(ranges))
 	}
 
-	// Check handler entry.
 	if ranges[0].file != "src/handlers/user.ts" || ranges[0].funcName != "CreateUser" {
-		t.Errorf("ranges[0] = {file: %q, func: %q}, want handler", ranges[0].file, ranges[0].funcName)
+		t.Errorf("ranges[0] = {file: %q, func: %q}, want function", ranges[0].file, ranges[0].funcName)
 	}
 	if ranges[0].startLine != 10 || ranges[0].endLine != 30 {
 		t.Errorf("ranges[0] lines = %d-%d, want 10-30", ranges[0].startLine, ranges[0].endLine)
 	}
-
-	// Check non-boundary chain entry.
-	if ranges[1].file != "src/services/validator.ts" || ranges[1].funcName != "validateInput" {
-		t.Errorf("ranges[1] = {file: %q, func: %q}, want validateInput", ranges[1].file, ranges[1].funcName)
-	}
-
-	// formatResponse.
-	if ranges[2].file != "src/helpers/format.ts" || ranges[2].funcName != "formatResponse" {
-		t.Errorf("ranges[2] = {file: %q, func: %q}, want formatResponse", ranges[2].file, ranges[2].funcName)
-	}
 }
 
-func TestCollectTSRangesEmptyHandler(t *testing.T) {
-	ep := &model.Endpoint{
-		Name:    "EmptyEndpoint",
-		Handler: model.FuncLocation{}, // no file
-		Chain:   nil,
+func TestCollectTSRangesEmptyFile(t *testing.T) {
+	fn := &model.Function{
+		Name: "EmptyFunc",
 	}
 
-	ranges := collectTSRanges(ep)
+	ranges := collectTSRanges(fn)
 	if len(ranges) != 0 {
-		t.Errorf("expected empty ranges for endpoint without handler file, got %d", len(ranges))
+		t.Errorf("expected empty ranges for function without file, got %d", len(ranges))
 	}
 }
 

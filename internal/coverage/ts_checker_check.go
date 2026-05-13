@@ -12,7 +12,7 @@ import (
 )
 
 // Check runs the test with coverage and parses the istanbul/v8 coverage report.
-func (c *TSChecker) Check(projectRoot, testFile string, ep *model.Endpoint) (*Report, error) {
+func (c *TSChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
 	absTest, err := filepath.Abs(testFile)
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)
@@ -44,7 +44,7 @@ func (c *TSChecker) Check(projectRoot, testFile string, ep *model.Endpoint) (*Re
 		return nil, fmt.Errorf("parse coverage report: %w", err)
 	}
 
-	ranges := collectTSRanges(ep)
+	ranges := collectTSRanges(fn)
 
 	return buildTSReport(ranges, coverageData, projectRoot), nil
 }

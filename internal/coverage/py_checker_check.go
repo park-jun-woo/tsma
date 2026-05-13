@@ -1,5 +1,5 @@
 //ff:func feature=coverage type=implementation control=sequence
-//ff:what Runs Python tests with coverage and computes per-function coverage for the endpoint
+//ff:what Runs Python tests with coverage and computes per-function coverage
 package coverage
 
 import (
@@ -11,7 +11,7 @@ import (
 )
 
 // Check runs pytest with coverage and parses the results.
-func (c *PyChecker) Check(projectRoot, testFile string, ep *model.Endpoint) (*Report, error) {
+func (c *PyChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
 	absTest, err := filepath.Abs(testFile)
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)
@@ -37,7 +37,7 @@ func (c *PyChecker) Check(projectRoot, testFile string, ep *model.Endpoint) (*Re
 		return nil, fmt.Errorf("parse coverage json: %w", err)
 	}
 
-	ranges := collectPyRanges(ep)
+	ranges := collectPyRanges(fn)
 
 	return buildPyReport(ranges, covData, projectRoot), nil
 }
