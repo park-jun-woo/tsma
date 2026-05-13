@@ -34,9 +34,7 @@ func Execute(version string) {
 
 func init() {
 	rootCmd.AddCommand(nextCmd)
-	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(coverCmd)
 	rootCmd.AddCommand(resetCmd)
 }

@@ -1,11 +1,10 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Resets a function to TODO or deletes the entire session
+//ff:what Deletes the entire session when called with --all flag
 package cli
 
 import (
 	"fmt"
 
-	"github.com/park-jun-woo/tsma/internal/model"
 	"github.com/park-jun-woo/tsma/internal/session"
 	"github.com/spf13/cobra"
 )
@@ -13,11 +12,10 @@ import (
 var resetAll bool
 
 var resetCmd = &cobra.Command{
-	Use:   "reset [func-name]",
-	Short: "Reset a function to TODO or delete the entire session",
-	Long: `Reset a specific function to TODO status, or use --all to delete the entire
-session. After --all, the next 'tsma next' will re-analyze the project.`,
-	Args: cobra.MaximumNArgs(1),
+	Use:   "reset",
+	Short: "Delete the entire session",
+	Long: `Delete the entire session with --all flag.
+After reset, the next 'tsma next' will re-analyze the project.`,
 	RunE: runReset,
 }
 
@@ -26,48 +24,18 @@ func init() {
 }
 
 func runReset(cmd *cobra.Command, args []string) error {
+	if !resetAll {
+		return fmt.Errorf("use --all to delete the entire session")
+	}
+
 	root, err := getProjectRoot()
 	if err != nil {
 		return err
 	}
 
-	if resetAll {
-		if err := session.Delete(root); err != nil {
-			return fmt.Errorf("delete session: %w", err)
-		}
-		fmt.Println("Session deleted. Next `tsma next` will re-analyze the project.")
-		return nil
+	if err := session.Delete(root); err != nil {
+		return fmt.Errorf("delete session: %w", err)
 	}
-
-	if len(args) == 0 {
-		return fmt.Errorf("specify a function name or use --all")
-	}
-
-	funcName := args[0]
-
-	if !session.Exists(root) {
-		return fmt.Errorf("no session found — nothing to reset")
-	}
-	sess, err := session.Load(root)
-	if err != nil {
-		return fmt.Errorf("load session: %w", err)
-	}
-
-	fn := sess.FindFunction(funcName)
-	if fn == nil {
-		return fmt.Errorf("function not found: %s", funcName)
-	}
-
-	fn.Status = model.StatusTodo
-	fn.TestFile = ""
-	fn.FailOutput = ""
-	sess.RecalcSummary()
-
-	if err := session.Save(root, sess); err != nil {
-		return fmt.Errorf("save session: %w", err)
-	}
-
-	remaining := sess.Summary.Todo + sess.Summary.Fail
-	fmt.Printf("%s reset to TODO (%d remaining)\n", funcName, remaining)
+	fmt.Println("Session deleted. Next `tsma next` will re-analyze the project.")
 	return nil
 }

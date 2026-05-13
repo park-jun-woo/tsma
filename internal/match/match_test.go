@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/park-jun-woo/tsma/internal/model"
 )
 
 // writeFixture creates a file relative to dir with the given content.
@@ -47,7 +45,7 @@ func TestNewMatcherPython(t *testing.T) {
 
 func TestNewMatcherUnsupported(t *testing.T) {
 	m := NewMatcher("ruby")
-	_, found := m.Match("/tmp", &model.Function{Name: "foo"})
+	_, found := m.Match("/tmp", "handler.rb")
 	if found {
 		t.Error("unsupported matcher should return found=false")
 	}
@@ -64,86 +62,19 @@ func TestGoMatcherFound(t *testing.T) {
 
 func Login() error { return nil }
 `)
-
 	writeFixture(t, dir, "internal/handler/handler_test.go", `package handler
 
 import "testing"
 
-func TestLogin_Success(t *testing.T) {}
-func TestLogin_Failure(t *testing.T) {}
+func TestLogin(t *testing.T) {}
 `)
 
 	m := &GoMatcher{}
-	fn := &model.Function{
-		Name: "Login",
-		File: "internal/handler/handler.go",
-	}
-
-	testFile, found := m.Match(dir, fn)
+	testFile, found := m.Match(dir, "internal/handler/handler.go")
 	if !found {
-		t.Fatal("expected to find test file for Login")
+		t.Fatal("expected to find test file for handler.go")
 	}
 	if testFile != filepath.Join("internal", "handler", "handler_test.go") {
-		t.Errorf("testFile = %q, unexpected", testFile)
-	}
-}
-
-func TestGoMatcherUnexportedGetEnv(t *testing.T) {
-	dir := t.TempDir()
-
-	writeFixture(t, dir, "internal/config/config.go", `package config
-
-func getEnv(key string) string { return "" }
-`)
-
-	writeFixture(t, dir, "internal/config/config_test.go", `package config
-
-import "testing"
-
-func TestGetEnv_Fallback(t *testing.T) {}
-`)
-
-	m := &GoMatcher{}
-	fn := &model.Function{
-		Name: "getEnv",
-		File: "internal/config/config.go",
-	}
-
-	testFile, found := m.Match(dir, fn)
-	if !found {
-		t.Fatal("expected to find test file for unexported getEnv")
-	}
-	if testFile != filepath.Join("internal", "config", "config_test.go") {
-		t.Errorf("testFile = %q, unexpected", testFile)
-	}
-}
-
-func TestGoMatcherUnexportedParseTemplateID(t *testing.T) {
-	dir := t.TempDir()
-
-	writeFixture(t, dir, "internal/parser/parser.go", `package parser
-
-func parseTemplateID(raw string) (int, error) { return 0, nil }
-`)
-
-	writeFixture(t, dir, "internal/parser/parser_test.go", `package parser
-
-import "testing"
-
-func TestParseTemplateID_Valid(t *testing.T) {}
-`)
-
-	m := &GoMatcher{}
-	fn := &model.Function{
-		Name: "parseTemplateID",
-		File: "internal/parser/parser.go",
-	}
-
-	testFile, found := m.Match(dir, fn)
-	if !found {
-		t.Fatal("expected to find test file for unexported parseTemplateID")
-	}
-	if testFile != filepath.Join("internal", "parser", "parser_test.go") {
 		t.Errorf("testFile = %q, unexpected", testFile)
 	}
 }
@@ -156,42 +87,25 @@ func TestGoMatcherNotFound(t *testing.T) {
 func Login() error { return nil }
 `)
 
-	writeFixture(t, dir, "handler_test.go", `package main
-
-import "testing"
-
-func TestSignup(t *testing.T) {}
-`)
-
 	m := &GoMatcher{}
-	fn := &model.Function{
-		Name: "Login",
-		File: "handler.go",
-	}
-
-	_, found := m.Match(dir, fn)
+	_, found := m.Match(dir, "handler.go")
 	if found {
-		t.Error("expected no match when no Test* contains function name")
+		t.Error("expected no match when no test file exists")
 	}
 }
 
 func TestGoMatcherNoTestFiles(t *testing.T) {
 	dir := t.TempDir()
 
-	writeFixture(t, dir, "handler.go", `package main
+	writeFixture(t, dir, "internal/api/server.go", `package api
 
-func Login() error { return nil }
+func Serve() {}
 `)
 
 	m := &GoMatcher{}
-	fn := &model.Function{
-		Name: "Login",
-		File: "handler.go",
-	}
-
-	_, found := m.Match(dir, fn)
+	_, found := m.Match(dir, "internal/api/server.go")
 	if found {
-		t.Error("expected no match when no test files exist")
+		t.Error("expected no match when no test file exists")
 	}
 }
 
@@ -199,25 +113,34 @@ func Login() error { return nil }
 // TSMatcher tests
 // ---------------------------------------------------------------------------
 
-func TestTSMatcherFilenameMatch(t *testing.T) {
+func TestTSMatcherTestFile(t *testing.T) {
 	dir := t.TempDir()
 
 	writeFixture(t, dir, "src/handler.ts", `export function handleLogin() {}`)
-	writeFixture(t, dir, "src/handler.test.ts", `describe('handleLogin', () => {
-  test('should work', () => {});
-});`)
+	writeFixture(t, dir, "src/handler.test.ts", `describe('handleLogin', () => {});`)
 
 	m := &TSMatcher{}
-	fn := &model.Function{
-		Name: "handleLogin",
-		File: "src/handler.ts",
-	}
-
-	testFile, found := m.Match(dir, fn)
+	testFile, found := m.Match(dir, "src/handler.ts")
 	if !found {
-		t.Fatal("expected to find test file via filename match")
+		t.Fatal("expected to find test file for handler.ts")
 	}
 	if testFile != filepath.Join("src", "handler.test.ts") {
+		t.Errorf("testFile = %q, unexpected", testFile)
+	}
+}
+
+func TestTSMatcherSpecFile(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFixture(t, dir, "src/service.ts", `export function createUser() {}`)
+	writeFixture(t, dir, "src/service.spec.ts", `describe('createUser', () => {});`)
+
+	m := &TSMatcher{}
+	testFile, found := m.Match(dir, "src/service.ts")
+	if !found {
+		t.Fatal("expected to find .spec.ts file")
+	}
+	if testFile != filepath.Join("src", "service.spec.ts") {
 		t.Errorf("testFile = %q, unexpected", testFile)
 	}
 }
@@ -229,40 +152,11 @@ func TestTSMatcherTestsDirMatch(t *testing.T) {
 	writeFixture(t, dir, "src/__tests__/handler.test.ts", `describe('handleLogin', () => {});`)
 
 	m := &TSMatcher{}
-	fn := &model.Function{
-		Name: "handleLogin",
-		File: "src/handler.ts",
-	}
-
-	testFile, found := m.Match(dir, fn)
+	testFile, found := m.Match(dir, "src/handler.ts")
 	if !found {
 		t.Fatal("expected to find test file in __tests__/ dir")
 	}
 	if testFile != filepath.Join("src", "__tests__", "handler.test.ts") {
-		t.Errorf("testFile = %q, unexpected", testFile)
-	}
-}
-
-func TestTSMatcherContentMatch(t *testing.T) {
-	dir := t.TempDir()
-
-	writeFixture(t, dir, "src/auth.ts", `export function login() {}`)
-	// Different filename but content references the function.
-	writeFixture(t, dir, "src/api.test.ts", `describe('login', () => {
-  it('should authenticate', () => {});
-});`)
-
-	m := &TSMatcher{}
-	fn := &model.Function{
-		Name: "login",
-		File: "src/auth.ts",
-	}
-
-	testFile, found := m.Match(dir, fn)
-	if !found {
-		t.Fatal("expected to find test file via content match")
-	}
-	if testFile != filepath.Join("src", "api.test.ts") {
 		t.Errorf("testFile = %q, unexpected", testFile)
 	}
 }
@@ -273,35 +167,9 @@ func TestTSMatcherNotFound(t *testing.T) {
 	writeFixture(t, dir, "src/handler.ts", `export function handleLogin() {}`)
 
 	m := &TSMatcher{}
-	fn := &model.Function{
-		Name: "handleLogin",
-		File: "src/handler.ts",
-	}
-
-	_, found := m.Match(dir, fn)
+	_, found := m.Match(dir, "src/handler.ts")
 	if found {
 		t.Error("expected no match when no test files exist")
-	}
-}
-
-func TestTSMatcherSpecFile(t *testing.T) {
-	dir := t.TempDir()
-
-	writeFixture(t, dir, "src/service.ts", `export function createUser() {}`)
-	writeFixture(t, dir, "src/service.spec.ts", `describe('createUser', () => {});`)
-
-	m := &TSMatcher{}
-	fn := &model.Function{
-		Name: "createUser",
-		File: "src/service.ts",
-	}
-
-	testFile, found := m.Match(dir, fn)
-	if !found {
-		t.Fatal("expected to find .spec.ts file")
-	}
-	if testFile != filepath.Join("src", "service.spec.ts") {
-		t.Errorf("testFile = %q, unexpected", testFile)
 	}
 }
 
@@ -316,14 +184,9 @@ func TestPyMatcherFilenameMatch(t *testing.T) {
 	writeFixture(t, dir, "test_auth_svc.py", `def test_login(): pass`)
 
 	m := &PyMatcher{}
-	fn := &model.Function{
-		Name: "login",
-		File: "auth_svc.py",
-	}
-
-	testFile, found := m.Match(dir, fn)
+	testFile, found := m.Match(dir, "auth_svc.py")
 	if !found {
-		t.Fatal("expected to find test file via filename match")
+		t.Fatal("expected to find test file for auth_svc.py")
 	}
 	if testFile != "test_auth_svc.py" {
 		t.Errorf("testFile = %q, unexpected", testFile)
@@ -337,41 +200,11 @@ func TestPyMatcherTestsDirMatch(t *testing.T) {
 	writeFixture(t, dir, "src/tests/test_handler.py", `def test_handle_request(): pass`)
 
 	m := &PyMatcher{}
-	fn := &model.Function{
-		Name: "handle_request",
-		File: "src/handler.py",
-	}
-
-	testFile, found := m.Match(dir, fn)
+	testFile, found := m.Match(dir, "src/handler.py")
 	if !found {
 		t.Fatal("expected to find test file in tests/ dir")
 	}
 	if testFile != filepath.Join("src", "tests", "test_handler.py") {
-		t.Errorf("testFile = %q, unexpected", testFile)
-	}
-}
-
-func TestPyMatcherContentMatch(t *testing.T) {
-	dir := t.TempDir()
-
-	writeFixture(t, dir, "service.py", `def create_order(): pass`)
-	// Different filename but content mentions the function.
-	writeFixture(t, dir, "test_orders.py", `def test_create_order():
-    result = create_order()
-    assert result is not None
-`)
-
-	m := &PyMatcher{}
-	fn := &model.Function{
-		Name: "create_order",
-		File: "service.py",
-	}
-
-	testFile, found := m.Match(dir, fn)
-	if !found {
-		t.Fatal("expected to find test file via content match")
-	}
-	if testFile != "test_orders.py" {
 		t.Errorf("testFile = %q, unexpected", testFile)
 	}
 }
@@ -382,32 +215,9 @@ func TestPyMatcherNotFound(t *testing.T) {
 	writeFixture(t, dir, "handler.py", `def login(): pass`)
 
 	m := &PyMatcher{}
-	fn := &model.Function{
-		Name: "login",
-		File: "handler.py",
-	}
-
-	_, found := m.Match(dir, fn)
+	_, found := m.Match(dir, "handler.py")
 	if found {
 		t.Error("expected no match when no test files exist")
-	}
-}
-
-func TestPyMatcherNoContentMatch(t *testing.T) {
-	dir := t.TempDir()
-
-	writeFixture(t, dir, "handler.py", `def login(): pass`)
-	writeFixture(t, dir, "test_other.py", `def test_signup(): pass`)
-
-	m := &PyMatcher{}
-	fn := &model.Function{
-		Name: "login",
-		File: "handler.py",
-	}
-
-	_, found := m.Match(dir, fn)
-	if found {
-		t.Error("expected no match when test file does not mention function")
 	}
 }
 

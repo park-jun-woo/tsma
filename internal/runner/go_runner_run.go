@@ -20,7 +20,7 @@ func (r *GoRunner) Run(projectRoot, testFile string) (*Result, error) {
 		return nil, err
 	}
 
-	testFuncs, err := extractTestFuncs(absTest)
+	testFuncs, err := ExtractTestFuncs(absTest)
 	if err != nil {
 		return nil, fmt.Errorf("extract test functions: %w", err)
 	}

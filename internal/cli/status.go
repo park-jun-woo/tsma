@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Shows overall progress summary with counts and percentages
+//ff:what Shows overall progress summary with counts, percentages, and average coverage
 package cli
 
 import (
@@ -12,7 +12,7 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show overall progress summary",
-	Long:  `Show overall progress summary (total/done/fail/todo counts and percentages).`,
+	Long:  `Show overall progress summary (total/pass/done/todo counts, percentages, and average coverage).`,
 	RunE:  runStatus,
 }
 
@@ -38,9 +38,12 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("%d functions\n", s.Total)
+	fmt.Printf("PASS: %4d (%.1f%%)\n", s.Pass, float64(s.Pass)/total*100)
 	fmt.Printf("DONE: %4d (%.1f%%)\n", s.Done, float64(s.Done)/total*100)
-	fmt.Printf("FAIL: %4d (%.1f%%)\n", s.Fail, float64(s.Fail)/total*100)
 	fmt.Printf("TODO: %4d (%.1f%%)\n", s.Todo, float64(s.Todo)/total*100)
+
+	avg := computeAverageCoverage(sess)
+	fmt.Printf("\nCoverage average: %.0f%%\n", avg)
 
 	return nil
 }

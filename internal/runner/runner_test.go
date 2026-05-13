@@ -53,7 +53,7 @@ func TestNewRunnerUnsupported(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// extractTestFuncs tests
+// ExtractTestFuncs tests
 // ---------------------------------------------------------------------------
 
 func TestExtractTestFuncs(t *testing.T) {
@@ -83,9 +83,9 @@ func BenchmarkLogin(b *testing.B) {
 		t.Fatal(err)
 	}
 
-	funcs, err := extractTestFuncs(path)
+	funcs, err := ExtractTestFuncs(path)
 	if err != nil {
-		t.Fatalf("extractTestFuncs: %v", err)
+		t.Fatalf("ExtractTestFuncs: %v", err)
 	}
 
 	if len(funcs) != 2 {
@@ -111,9 +111,9 @@ func helperFunc() {}
 		t.Fatal(err)
 	}
 
-	funcs, err := extractTestFuncs(path)
+	funcs, err := ExtractTestFuncs(path)
 	if err != nil {
-		t.Fatalf("extractTestFuncs: %v", err)
+		t.Fatalf("ExtractTestFuncs: %v", err)
 	}
 	if len(funcs) != 0 {
 		t.Errorf("expected no funcs, got %v", funcs)
@@ -121,7 +121,7 @@ func helperFunc() {}
 }
 
 func TestExtractTestFuncsNonexistent(t *testing.T) {
-	_, err := extractTestFuncs("/nonexistent/path/test.go")
+	_, err := ExtractTestFuncs("/nonexistent/path/test.go")
 	if err == nil {
 		t.Fatal("expected error for nonexistent file")
 	}

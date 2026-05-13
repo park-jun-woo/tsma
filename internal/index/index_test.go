@@ -193,6 +193,41 @@ func MockLogin() {}
 	}
 }
 
+func TestGoIndexerSkipsGeneratedFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "handler.go", `package main
+
+func Handler() {}
+`)
+	writeFile(t, dir, "server_gen.go", `package main
+
+func GeneratedRoute() {}
+`)
+	writeFile(t, dir, "openapi.gen.go", `package main
+
+func GeneratedOpenAPI() {}
+`)
+	writeFile(t, dir, "message.pb.go", `package main
+
+func GeneratedProto() {}
+`)
+
+	idx := &GoIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("GoIndexer.Index: %v", err)
+	}
+
+	if len(funcs) != 1 {
+		t.Fatalf("expected 1 function (generated files excluded), got %d", len(funcs))
+	}
+
+	if funcs[0].Name != "Handler" {
+		t.Errorf("expected function 'Handler', got %q", funcs[0].Name)
+	}
+}
+
 func TestGoIndexerSkipsVendor(t *testing.T) {
 	dir := t.TempDir()
 
@@ -576,6 +611,12 @@ func TestIsGoSource(t *testing.T) {
 		{"internal/api/handler.go", true},
 		{"internal/api/handler_test.go", false},
 		{"internal/mock_repo.go", false},
+		{"server_gen.go", false},
+		{"openapi.gen.go", false},
+		{"message.pb.go", false},
+		{"internal/api/server_gen.go", false},
+		{"internal/api/types.gen.go", false},
+		{"internal/proto/msg.pb.go", false},
 	}
 	for _, tt := range tests {
 		got := isGoSource(tt.path)

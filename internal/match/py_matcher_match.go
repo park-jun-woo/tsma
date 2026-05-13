@@ -1,28 +1,24 @@
-//ff:func feature=match type=implementation control=iteration dimension=1
-//ff:what Searches same dir and tests/ for test_ prefix files matching by filename or content
+//ff:func feature=match type=implementation control=sequence
+//ff:what Checks same dir and tests/ for test_ prefixed Python files matching the source name
 package match
 
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/park-jun-woo/tsma/internal/model"
 )
 
-func (m *PyMatcher) Match(projectRoot string, fn *model.Function) (string, bool) {
-	srcDir := filepath.Join(projectRoot, filepath.Dir(fn.File))
-	srcBase := filepath.Base(fn.File)
+func (m *PyMatcher) Match(projectRoot string, sourceFile string) (string, bool) {
+	srcDir := filepath.Dir(sourceFile)
+	srcBase := filepath.Base(sourceFile)
+	expectedTest := "test_" + srcBase
 
-	// Directories to search: same dir, then tests/ subdirectory.
 	searchDirs := []string{srcDir, filepath.Join(srcDir, "tests")}
 
 	for _, dir := range searchDirs {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		if found, path := matchPyInDir(projectRoot, dir, entries, srcBase, fn.Name); found {
-			return path, true
+		testRel := filepath.Join(dir, expectedTest)
+		absPath := filepath.Join(projectRoot, testRel)
+		if _, err := os.Stat(absPath); err == nil {
+			return testRel, true
 		}
 	}
 

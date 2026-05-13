@@ -4,8 +4,8 @@ package runner
 
 import "strings"
 
-// extractTestFuncs parses a Go test file and returns test function names.
-func extractTestFuncs(filePath string) ([]string, error) {
+// ExtractTestFuncs parses a Go test file and returns test function names.
+func ExtractTestFuncs(filePath string) ([]string, error) {
 	data, err := readFileBytes(filePath)
 	if err != nil {
 		return nil, err

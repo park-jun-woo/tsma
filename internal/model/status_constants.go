@@ -1,7 +1,9 @@
+//ff:type feature=model type=model
+//ff:what Defines the status constants for function tracking
 package model
 
 const (
 	StatusTodo = "todo"
-	StatusFail = "fail"
 	StatusDone = "done"
+	StatusPass = "pass"
 )

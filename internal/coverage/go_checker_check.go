@@ -1,5 +1,5 @@
 //ff:func feature=coverage type=implementation control=sequence
-//ff:what Runs go test with coverprofile and computes per-function coverage
+//ff:what Runs go test with coverprofile filtered by test file functions and computes per-function coverage
 package coverage
 
 import (
@@ -7,8 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/park-jun-woo/tsma/internal/model"
+	"github.com/park-jun-woo/tsma/internal/runner"
 )
 
 // Check runs go test with coverage and parses the profile.
@@ -28,11 +30,19 @@ func (c *GoChecker) Check(projectRoot, testFile string, fn *model.Function) (*Re
 	coverFile := filepath.Join(projectRoot, ".tsma", "cover.out")
 	os.MkdirAll(filepath.Dir(coverFile), 0o755)
 
-	cmd := exec.Command("go", "test", "-count=1",
-		"-coverprofile="+coverFile,
+	args := []string{"test", "-count=1",
+		"-coverprofile=" + coverFile,
 		"-covermode=set",
-		pkgPath,
-	)
+	}
+
+	testFuncs, err := runner.ExtractTestFuncs(absTest)
+	if err == nil && len(testFuncs) > 0 {
+		args = append(args, "-run", strings.Join(testFuncs, "|"))
+	}
+
+	args = append(args, pkgPath)
+
+	cmd := exec.Command("go", args...)
 	cmd.Dir = projectRoot
 
 	output, err := cmd.CombinedOutput()

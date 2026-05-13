@@ -5,9 +5,10 @@ package model
 import "time"
 
 type Session struct {
-	Project   string     `json:"project"`
-	Lang      string     `json:"lang"`
-	CheckedAt time.Time  `json:"checked_at"`
-	Functions []Function `json:"functions"`
-	Summary   Summary    `json:"summary"`
+	Project      string     `json:"project"`
+	Lang         string     `json:"lang"`
+	CheckedAt    time.Time  `json:"checked_at"`
+	CurrentIndex int        `json:"current_index"`
+	Functions    []Function `json:"functions"`
+	Summary      Summary    `json:"summary"`
 }

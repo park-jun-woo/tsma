@@ -181,11 +181,11 @@ func TestComputeFuncCoverage(t *testing.T) {
 }
 
 func TestComputeFuncCoverageNoBlocks(t *testing.T) {
-	// No matching blocks — treated as 100% (empty function).
+	// No matching blocks — treated as 0% (no coverage data available).
 	r := funcRange{file: "pkg/empty.go", startLine: 1, endLine: 5, funcName: "Empty"}
 	fc := computeFuncCoverage(r, nil, "/project")
-	if fc.CoveredPct != 100 {
-		t.Errorf("CoveredPct = %f, want 100 (no blocks)", fc.CoveredPct)
+	if fc.CoveredPct != 0 {
+		t.Errorf("CoveredPct = %f, want 0 (no blocks)", fc.CoveredPct)
 	}
 }
 

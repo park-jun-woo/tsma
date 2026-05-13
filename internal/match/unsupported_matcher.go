@@ -2,10 +2,8 @@
 //ff:what Returns no match for unsupported languages
 package match
 
-import "github.com/park-jun-woo/tsma/internal/model"
-
 type unsupportedMatcher struct{}
 
-func (u *unsupportedMatcher) Match(_ string, _ *model.Function) (string, bool) {
+func (u *unsupportedMatcher) Match(_ string, _ string) (string, bool) {
 	return "", false
 }

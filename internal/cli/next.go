@@ -1,18 +1,21 @@
-//ff:func feature=cli type=command control=sequence
-//ff:what Shows the next TODO or FAIL function to work on
+//ff:func feature=cli type=command control=selection
+//ff:what Orchestrates the next-function workflow: detect, run, measure, advance
 package cli
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/park-jun-woo/tsma/internal/model"
+	"github.com/park-jun-woo/tsma/internal/session"
 	"github.com/spf13/cobra"
 )
 
 var nextCmd = &cobra.Command{
 	Use:   "next",
-	Short: "Show the next TODO or FAIL function to work on",
-	Long: `Show the next incomplete function (TODO or FAIL) in order.
-If no session exists, automatically analyze the project first.`,
+	Short: "Detect test changes, run tests, measure coverage, and advance",
+	Long: `The core command. Finds the current TODO function, detects test file
+changes, runs tests, measures coverage, and advances to the next function.`,
 	RunE: runNext,
 }
 
@@ -27,12 +30,88 @@ func runNext(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	next := findFirstIncomplete(sess)
-	if next == nil {
-		fmt.Println("All functions DONE!")
+	fn := advanceToNext(sess)
+	if fn == nil {
+		fmt.Println("All functions complete!")
+		if err := session.Save(root, sess); err != nil {
+			return fmt.Errorf("save session: %w", err)
+		}
 		return nil
 	}
 
-	printNextFunction(next)
+	changed, testFile := detectTestChange(root, sess.Lang, fn)
+	if testFile == "" {
+		printTodoFunction(fn, "")
+		if err := session.Save(root, sess); err != nil {
+			return fmt.Errorf("save session: %w", err)
+		}
+		return nil
+	}
+
+	if !changed {
+		printTodoFunction(fn, testFile)
+		if err := session.Save(root, sess); err != nil {
+			return fmt.Errorf("save session: %w", err)
+		}
+		return nil
+	}
+
+	result := runAndMeasure(root, sess.Lang, fn, testFile)
+
+	switch result.outcome {
+	case outcomeTestFail:
+		fn.TestFile = testFile
+		fn.TestMtime = result.mtime
+		fn.FailOutput = result.failOutput
+		fmt.Fprintf(os.Stderr, "FAIL  %s\n", fn.Name)
+		fmt.Fprintf(os.Stderr, "  %s\n", result.failOutput)
+		printTodoFunction(fn, testFile)
+
+	case outcomePass:
+		fn.Status = model.StatusPass
+		fn.TestFile = testFile
+		fn.TestMtime = result.mtime
+		fn.CoveragePct = 100
+		fn.FailOutput = ""
+		sess.CurrentIndex++
+		fmt.Printf("PASS  %s  100%%\n", fn.Name)
+		next := advanceToNext(sess)
+		if next != nil {
+			printTodoFunction(next, next.TestFile)
+		} else {
+			fmt.Println("All functions complete!")
+		}
+
+	case outcomeDone:
+		fn.Status = model.StatusDone
+		fn.TestFile = testFile
+		fn.TestMtime = result.mtime
+		fn.CoveragePct = result.coveragePct
+		fn.FailOutput = ""
+		sess.CurrentIndex++
+		fmt.Printf("DONE  %s  %.0f%%\n", fn.Name, result.coveragePct)
+		next := advanceToNext(sess)
+		if next != nil {
+			printTodoFunction(next, next.TestFile)
+		} else {
+			fmt.Println("All functions complete!")
+		}
+
+	case outcomeRetry:
+		fn.TestFile = testFile
+		fn.TestMtime = result.mtime
+		fn.Attempt = result.attempt
+		fn.CoveragePct = result.coveragePct
+		fn.FailOutput = ""
+		fmt.Printf("PARTIAL  %s  %.0f%%  (attempt %d — improve coverage)\n",
+			fn.Name, result.coveragePct, result.attempt)
+		printUncovered(result.uncovered)
+		printTodoFunction(fn, testFile)
+	}
+
+	sess.RecalcSummary()
+	if err := session.Save(root, sess); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
 	return nil
 }

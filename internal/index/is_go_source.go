@@ -1,5 +1,5 @@
 //ff:func feature=index type=helper control=sequence
-//ff:what Returns true if the path is a non-test non-mock Go source file
+//ff:what Returns true if the path is a non-test non-mock non-generated Go source file
 package index
 
 import "strings"
@@ -10,6 +10,9 @@ func isGoSource(path string) bool {
 		return false
 	}
 	if strings.HasSuffix(path, "_test.go") {
+		return false
+	}
+	if strings.HasSuffix(path, "_gen.go") || strings.HasSuffix(path, ".gen.go") || strings.HasSuffix(path, ".pb.go") {
 		return false
 	}
 	base := path

@@ -6,10 +6,10 @@ func (s *Session) RecalcSummary() {
 	s.Summary = Summary{Total: len(s.Functions)}
 	for _, fn := range s.Functions {
 		switch fn.Status {
+		case StatusPass:
+			s.Summary.Pass++
 		case StatusDone:
 			s.Summary.Done++
-		case StatusFail:
-			s.Summary.Fail++
 		default:
 			s.Summary.Todo++
 		}

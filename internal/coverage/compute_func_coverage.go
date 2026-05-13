@@ -26,8 +26,6 @@ func computeFuncCoverage(r funcRange, blocks []coverBlock, projectRoot string) F
 
 	if fc.TotalBlocks > 0 {
 		fc.CoveredPct = float64(fc.CoveredBlocks) / float64(fc.TotalBlocks) * 100
-	} else {
-		fc.CoveredPct = 100
 	}
 
 	return fc

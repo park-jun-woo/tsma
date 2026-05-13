@@ -1,5 +1,5 @@
 //ff:func feature=cli type=helper control=iteration dimension=1
-//ff:what Prints a page of functions with aligned name and status columns
+//ff:what Prints a page of functions with aligned name, status, and coverage columns
 package cli
 
 import (
@@ -13,6 +13,10 @@ import (
 func printFuncList(functions []model.Function, maxName int) {
 	for _, fn := range functions {
 		status := strings.ToUpper(fn.Status)
-		fmt.Printf("  %-*s  %s\n", maxName, fn.Name, status)
+		if fn.Status == model.StatusPass || fn.Status == model.StatusDone {
+			fmt.Printf("  %-*s  %-4s  %3.0f%%\n", maxName, fn.Name, status, fn.CoveragePct)
+		} else {
+			fmt.Printf("  %-*s  %s\n", maxName, fn.Name, status)
+		}
 	}
 }

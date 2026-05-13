@@ -4,7 +4,7 @@ package model
 
 type Summary struct {
 	Total int `json:"total"`
+	Pass  int `json:"pass"`
 	Done  int `json:"done"`
-	Fail  int `json:"fail"`
 	Todo  int `json:"todo"`
 }

@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Lists all functions with pagination showing name and status
+//ff:what Lists all functions with pagination showing name, status, and coverage
 package cli
 
 import (
@@ -14,7 +14,7 @@ var listPage int
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all functions with their status",
-	Long:  `List all functions with their current status (DONE/FAIL/TODO) and pagination.`,
+	Long:  `List all functions with their current status (PASS/DONE/TODO) and pagination.`,
 	RunE:  runList,
 }
 
@@ -36,8 +36,8 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load session: %w", err)
 	}
 
-	fmt.Printf("%d functions — DONE: %d | FAIL: %d | TODO: %d\n\n",
-		sess.Summary.Total, sess.Summary.Done, sess.Summary.Fail, sess.Summary.Todo)
+	fmt.Printf("%d functions — PASS: %d | DONE: %d | TODO: %d\n\n",
+		sess.Summary.Total, sess.Summary.Pass, sess.Summary.Done, sess.Summary.Todo)
 
 	const pageSize = 20
 	total := len(sess.Functions)

@@ -33,7 +33,7 @@ func analyzeProject(projectRoot string) (*model.Session, error) {
 	m := match.NewMatcher(lf.Lang)
 	for i := range functions {
 		functions[i].Status = model.StatusTodo
-		testFile, found := m.Match(projectRoot, &functions[i])
+		testFile, found := m.Match(projectRoot, functions[i].File)
 		if found {
 			functions[i].TestFile = testFile
 		}
