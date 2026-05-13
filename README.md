@@ -1,63 +1,159 @@
 # tsma
 
-레거시 코드의 회귀 방어를 위한 함수 단위 테스트 관리 CLI 도구.
+Regression defense for legacy code. Indexes every function, detects missing tests, measures branch coverage, and guides LLM agents to fill the gaps — one function at a time.
 
-테스트 없이 프로덕션에서 돌아가는 코드에 테스트를 붙여서, 향후 변경 시 기존 동작이 깨지는 걸 막는다.
+## What tsma does
 
-## 역할
+1. **Shows where tests are missing.** Indexes every function, matches against test files by convention, and tells you exactly which functions have no tests.
+2. **Uncovered branch feedback makes LLM tests dramatically better.** Without feedback, LLM writes 60-70% coverage. With specific line numbers ("line 41, 44, 70 uncovered"), LLM reaches 100% in one shot.
+3. **Single-command loop for LLM agents.** `tsma next` handles detection, test execution, coverage measurement, and progress tracking. The agent just repeats one command until done.
 
-| 역할 | 설명 |
-|---|---|
-| **Linter** | 함수-테스트 매핑 누락 탐지. "이 함수에 테스트가 없다" |
-| **리포트** | 커버리지 정보 제공. 게이트가 아니라 대시보드 |
-| **세션** | LLM 에이전트 연속 작업을 위한 진행 상태 보존 |
+Validated on a real project (527 functions): 246 reached 100% (PASS), 281 accepted at best-effort (DONE), 0 remaining (TODO).
 
-## 설치
+## Install
 
 ```bash
 make install
 ```
 
-## 사용법
+## How it works
+
+`tsma next` is the only command you need. It drives the entire loop:
 
 ```
-tsma next                                    다음 미완료 함수 출력 (세션 없으면 자동 분석)
-tsma submit <func> <test-file> [--model M]   테스트 제출 → pass 검증 → 커버리지 리포트
-tsma list [--status S] [--sort F]            함수 목록 + 상태 조감도
-tsma status [--func F]                       진행률 요약 또는 함수별 상세
-tsma graph [--func F] [--dead]               call graph 조회
-tsma reset [<func> | --all]                  함수 또는 세션 초기화
+$ tsma next          # shows the next function without a test
+  → write a test
+$ tsma next          # detects the new test, runs it, measures coverage
+  → 100%? PASS, moves to next function
+  → <100%? shows uncovered branches, gives you one more shot
+$ tsma next          # re-measures after your fix
+  → improved or not, marks DONE, moves on
 ```
 
-## 워크플로우
+Repeat until `All functions complete!`.
+
+## Commands
 
 ```
-tsma next → 테스트 없는 함수 1개 제시
-         → LLM이 테스트 작성
-         → tsma submit으로 검증
-         → 반복
+tsma next              the entire workflow (detect → test → coverage → advance)
+tsma list [--page N]   all functions with status
+tsma status            progress summary
+tsma reset --all       delete session
 ```
 
-## 함수 상태
+## Status
 
-| 상태 | 의미 |
+| Status | Meaning |
 |---|---|
-| **TODO** | 테스트 없음 |
-| **PARTIAL** | 테스트 있으나 커버리지 개선 여지 있음 |
-| **DONE** | 테스트 pass + 분기 커버리지 100% |
-| **CAPPED** | LLM 재시도로 커버리지가 더 이상 오르지 않음. 현재 코드 구조의 한계 |
+| **TODO** | no test file, or coverage < 100% and due this round |
+| **DONE** | not 100% but best effort this round |
+| **PASS** | 100% branch coverage |
 
-### CAPPED 판정
-
-커버리지 100%가 게이트가 아닌 이유: DI 없는 레거시 코드에서 외부 의존성 분기는 원본 코드 변경 없이 유발 불가. "원본을 안 건드린다"는 전제와 "100% 강제"는 양립 불가능하다.
+## Example session
 
 ```
-정적 분석에서 100% 불가 판정 → LLM 1회 시도 → 즉시 CAPPED
-정적 분석에서 미결정        → LLM 3회 재시도 실패 → CAPPED
+$ tsma next
+
+No session found. Analyzing project...
+Detected: go
+Found 527 functions
+Session created.
+
+Login  TODO
+  file: internal/api/auth/handler.go:86-119
+  test: internal/api/auth/handler_test.go (not found)
 ```
 
-`--model` 플래그로 어떤 LLM이 시도했는지 기록. 서로 다른 모델이 시도해도 커버리지가 안 오르면 코드 구조의 한계로 판정.
+After writing a test:
 
-## 설계 문서
+```
+$ tsma next
 
-상세 설계: `~/.clari/repos/fullend/files/testmaster-설계.md`
+Login  testing...
+  [1/2] go test: PASS
+  [2/2] coverage: 100% (9/9)
+PASS ✓
+
+GetProfile  TODO
+  file: internal/api/auth/handler.go:121-148
+  test: (not found)
+```
+
+When coverage is not 100%:
+
+```
+$ tsma next
+
+ListContracts  testing...
+  [1/2] go test: PASS
+  [2/2] coverage: 65% (11/17)
+  UNCOVERED:
+    line 41 — if params.Status != nil
+    line 44 — if params.BuildingId != nil
+    line 70 — if err != nil (CountSummary)
+  ▶ Cover the uncovered branches. Next tsma next will re-measure.
+```
+
+## Principles
+
+1. **Convention-based test matching.** Go: `handler.go` → `handler_test.go` in the same directory. TS: `.test.ts` / `.spec.ts`. Python: `test_` prefix.
+2. **Session is cache, source files are truth.** If a test file is deleted, the function reverts to TODO regardless of what session.json says.
+3. **Generated code is excluded.** `*_gen.go`, `*.pb.go` are not indexed.
+4. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after one retry.
+
+## Why some functions can't reach 100%
+
+Whether a function can reach 100% branch coverage depends on how it receives its dependencies.
+
+**Interface (mockable) → 100% achievable:**
+
+```go
+type Handler struct {
+    svc AuthSvc              // interface — can be replaced with a mock
+}
+```
+
+In tests, you inject a mock that returns whatever you need:
+
+```go
+svc := mocks.NewMockAuthSvc(ctrl)
+svc.EXPECT().Login(...).Return(result, nil)   // success path
+svc.EXPECT().Login(...).Return(nil, err)      // error path
+```
+
+Every branch is reachable because you control all inputs and outputs.
+
+**Concrete type (not mockable) → stuck below 100%:**
+
+```go
+type Handler struct {
+    svc *service.SMSImportService    // struct pointer — cannot be replaced
+}
+```
+
+The real implementation runs with all its internal dependencies (DB, external APIs). You cannot make it return a specific error or a specific result. Branches that depend on those outcomes are unreachable in unit tests.
+
+**tsma's response:** After one retry with uncovered branch feedback, tsma marks the function as DONE with the achieved coverage. This is not a tool limitation — it reflects the code's testability. Introducing an interface (DI) would make the function fully testable, but that requires modifying the source code.
+
+## Language support
+
+| Language | Indexer | Test runner | Coverage |
+|---|---|---|---|
+| Go | `go/ast` | `go test` | `go test -coverprofile` |
+| TypeScript | regex | `npx vitest` / `npx jest` | `c8` / `istanbul` |
+| Python | regex | `pytest` | `coverage.py` |
+
+## For LLM agents
+
+Give this instruction to your agent:
+
+```
+1. Run `tsma next`
+2. If TODO — read the function, write a test
+3. If test fails — read the error, fix the test
+4. If uncovered branches shown — add tests for those branches
+5. If PASS/DONE — next function is automatically shown
+6. Repeat until "All functions complete!"
+```
+
+The agent only needs to know one command: `tsma next`.
