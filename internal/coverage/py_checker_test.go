@@ -119,6 +119,20 @@ func TestMatchesPyPathDifferentDir(t *testing.T) {
 	}
 }
 
+func TestMatchesPyPathFalsePositiveSuffix(t *testing.T) {
+	// "other_handler.py" should NOT match "handler.py" — suffix without separator
+	if matchesPyPath("other_handler.py", "handler.py", "/project") {
+		t.Error("expected false: 'other_handler.py' is not 'handler.py'")
+	}
+}
+
+func TestMatchesPyPathSuffixWithSeparator(t *testing.T) {
+	// "/some/path/handler.py" should match "handler.py" — suffix with separator
+	if !matchesPyPath("/some/path/handler.py", "handler.py", "/project") {
+		t.Error("expected true: '/some/path/handler.py' ends with '/handler.py'")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // collectPyRanges tests
 // ---------------------------------------------------------------------------

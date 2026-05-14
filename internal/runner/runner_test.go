@@ -364,6 +364,52 @@ func TestDetectPytestNone(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// containsPytest tests
+// ---------------------------------------------------------------------------
+
+func TestContainsPytestCommentOnly(t *testing.T) {
+	dir := t.TempDir()
+	content := `# not using pytest
+import unittest
+`
+	path := filepath.Join(dir, "test_handler.py")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// pattern is "pytest-cov", the file contains "pytest" only in a comment
+	// but not "pytest-cov" — should return false
+	if containsPytest(path, "pytest-cov") {
+		t.Error("expected false: file has 'pytest' in comment but pattern is 'pytest-cov'")
+	}
+}
+
+func TestContainsPytestPatternMatch(t *testing.T) {
+	dir := t.TempDir()
+	content := `pytest-cov==4.0.0
+`
+	path := filepath.Join(dir, "requirements.txt")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if !containsPytest(path, "pytest-cov") {
+		t.Error("expected true: file contains 'pytest-cov' matching pattern")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// findPython tests
+// ---------------------------------------------------------------------------
+
+func TestFindPythonReturnsString(t *testing.T) {
+	result := findPython()
+	if result != "python3" && result != "python" {
+		t.Errorf("findPython() = %q, want 'python3' or 'python'", result)
+	}
+}
+
 func TestDetectPytestEmptyPyprojectToml(t *testing.T) {
 	dir := t.TempDir()
 	content := `[tool.black]

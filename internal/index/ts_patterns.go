@@ -7,11 +7,11 @@ import "regexp"
 var (
 	// tsFuncPattern matches function declarations and const arrow functions.
 	tsFuncPattern = regexp.MustCompile(
-		`^(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(` +
+		`^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+(\w+)\s*\(` +
 			`|^(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=`,
 	)
 	// tsClassPattern matches class declarations.
-	tsClassPattern = regexp.MustCompile(`^(?:export\s+)?class\s+(\w+)`)
+	tsClassPattern = regexp.MustCompile(`^(?:export\s+)?(?:default\s+)?class\s+(\w+)`)
 	// tsMethodPattern matches class method declarations (indented).
-	tsMethodPattern = regexp.MustCompile(`^\s+(?:async\s+)?(\w+)\s*\([^)]*\)\s*[:{]`)
+	tsMethodPattern = regexp.MustCompile(`^\s+(?:(?:private|public|protected|static|override|readonly|abstract)\s+)*(?:async\s+)?(\w+)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*[:{]`)
 )

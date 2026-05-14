@@ -454,6 +454,270 @@ func TestTSIndexerSubdirectory(t *testing.T) {
 	}
 }
 
+func TestTSIndexerTSXFile(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "src/components/Button.tsx", `export function Button({ label }: Props) {
+  return <button>{label}</button>;
+}
+
+export const IconButton = ({ icon }: IconProps) => {
+  return <button>{icon}</button>;
+};
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	btn := findByName(funcs, "Button")
+	if btn == nil {
+		t.Fatal("expected to find 'Button' in .tsx file")
+	}
+	if !btn.Exported {
+		t.Error("Button should be exported")
+	}
+
+	iconBtn := findByName(funcs, "IconButton")
+	if iconBtn == nil {
+		t.Fatal("expected to find 'IconButton' in .tsx file")
+	}
+}
+
+func TestTSIndexerExportDefault(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "pages/index.ts", `export default function Page() {
+  return "hello";
+}
+
+export default class AppController {
+  handle(req: Request) {
+    return req;
+  }
+}
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	page := findByName(funcs, "Page")
+	if page == nil {
+		t.Fatal("expected to find 'Page' from export default function")
+	}
+	if !page.Exported {
+		t.Error("Page should be exported")
+	}
+
+	handle := findByName(funcs, "handle")
+	if handle == nil {
+		t.Fatal("expected to find 'handle' method of export default class")
+	}
+}
+
+func TestTSIndexerAccessModifiers(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "src/auth/service.ts", `export class AuthService {
+  private async validate(data: any) {
+    return true;
+  }
+
+  public static create() {
+    return new AuthService();
+  }
+
+  protected readonly getConfig(): Config {
+    return {};
+  }
+}
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	validate := findByName(funcs, "validate")
+	if validate == nil {
+		t.Fatal("expected to find 'validate' (private async method)")
+	}
+
+	create := findByName(funcs, "create")
+	if create == nil {
+		t.Fatal("expected to find 'create' (public static method)")
+	}
+
+	getConfig := findByName(funcs, "getConfig")
+	if getConfig == nil {
+		t.Fatal("expected to find 'getConfig' (protected readonly method)")
+	}
+}
+
+func TestTSIndexerGenericMethod(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "src/repo.ts", `export class Repository {
+  find<T>(id: string): T {
+    return {} as T;
+  }
+
+  public async findAll<T>(filter: Filter): Promise<T[]> {
+    return [];
+  }
+}
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	find := findByName(funcs, "find")
+	if find == nil {
+		t.Fatal("expected to find 'find' (generic method)")
+	}
+
+	findAll := findByName(funcs, "findAll")
+	if findAll == nil {
+		t.Fatal("expected to find 'findAll' (public async generic method)")
+	}
+}
+
+func TestTSIndexerConstNonFunction(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "config.ts", `export const MAX_RETRIES = 5;
+export const API_URL = "/api/v1";
+const handler = async () => {
+  return "ok";
+};
+export const processData = function(data: any) {
+  return data;
+};
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	maxRetries := findByName(funcs, "MAX_RETRIES")
+	if maxRetries != nil {
+		t.Error("MAX_RETRIES should NOT be indexed (non-function const)")
+	}
+
+	apiURL := findByName(funcs, "API_URL")
+	if apiURL != nil {
+		t.Error("API_URL should NOT be indexed (non-function const)")
+	}
+
+	handler := findByName(funcs, "handler")
+	if handler == nil {
+		t.Fatal("expected to find 'handler' (arrow function)")
+	}
+
+	processData := findByName(funcs, "processData")
+	if processData == nil {
+		t.Fatal("expected to find 'processData' (function expression)")
+	}
+}
+
+func TestTSIndexerEndLine(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "handler.ts", `export function first(req: Request) {
+  const result = process(req);
+  return result;
+}
+
+export function second() {
+  return "ok";
+}
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	first := findByName(funcs, "first")
+	if first == nil {
+		t.Fatal("expected to find 'first'")
+	}
+	second := findByName(funcs, "second")
+	if second == nil {
+		t.Fatal("expected to find 'second'")
+	}
+
+	if first.EndLine >= second.StartLine {
+		t.Errorf("first.EndLine (%d) should be < second.StartLine (%d)", first.EndLine, second.StartLine)
+	}
+	if first.EndLine <= first.StartLine {
+		t.Errorf("first.EndLine (%d) should be > first.StartLine (%d)", first.EndLine, first.StartLine)
+	}
+	if second.EndLine <= second.StartLine {
+		t.Errorf("second.EndLine (%d) should be > second.StartLine (%d)", second.EndLine, second.StartLine)
+	}
+}
+
+func TestTSIndexerEndLineLastFunction(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "util.ts", `export function compute(x: number) {
+  const result = x * 2;
+  return result;
+}
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	compute := findByName(funcs, "compute")
+	if compute == nil {
+		t.Fatal("expected to find 'compute'")
+	}
+	if compute.EndLine != 4 {
+		t.Errorf("compute.EndLine = %d, want 4", compute.EndLine)
+	}
+}
+
+func TestTSIndexerSkipsTestTSXFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "Button.tsx", `export function Button() { return null; }
+`)
+	writeFile(t, dir, "Button.test.tsx", `describe('Button', () => {});
+`)
+	writeFile(t, dir, "Button.spec.jsx", `describe('Button', () => {});
+`)
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	if len(funcs) != 1 {
+		t.Fatalf("expected 1 function (test tsx/jsx excluded), got %d", len(funcs))
+	}
+	if funcs[0].Name != "Button" {
+		t.Errorf("expected function 'Button', got %q", funcs[0].Name)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // PyIndexer tests
 // ---------------------------------------------------------------------------
@@ -596,6 +860,157 @@ func TestPyIndexerSubdirectory(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// PyIndexer EndLine tests
+// ---------------------------------------------------------------------------
+
+func TestPyIndexerEndLineConsecutiveFunctions(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "handler.py", `def handle_login(request):
+    result = auth_service.login(request.body)
+    return result
+
+async def async_handler(request):
+    return await process(request)
+`)
+
+	idx := &PyIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("PyIndexer.Index: %v", err)
+	}
+
+	login := findByName(funcs, "handle_login")
+	if login == nil {
+		t.Fatal("expected to find 'handle_login'")
+	}
+	if login.StartLine != 1 {
+		t.Errorf("handle_login.StartLine = %d, want 1", login.StartLine)
+	}
+	if login.EndLine != 3 {
+		t.Errorf("handle_login.EndLine = %d, want 3", login.EndLine)
+	}
+
+	ah := findByName(funcs, "async_handler")
+	if ah == nil {
+		t.Fatal("expected to find 'async_handler'")
+	}
+	if ah.StartLine != 5 {
+		t.Errorf("async_handler.StartLine = %d, want 5", ah.StartLine)
+	}
+	if ah.EndLine != 6 {
+		t.Errorf("async_handler.EndLine = %d, want 6", ah.EndLine)
+	}
+}
+
+func TestPyIndexerEndLineClassMethods(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "services/auth.py", `class AuthService:
+    def login(self, credentials):
+        return self.validate(credentials)
+
+    def validate(self, data):
+        return True
+
+def standalone():
+    pass
+`)
+
+	idx := &PyIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("PyIndexer.Index: %v", err)
+	}
+
+	login := findByName(funcs, "login")
+	if login == nil {
+		t.Fatal("expected to find 'login'")
+	}
+	if login.EndLine != 3 {
+		t.Errorf("login.EndLine = %d, want 3", login.EndLine)
+	}
+
+	validate := findByName(funcs, "validate")
+	if validate == nil {
+		t.Fatal("expected to find 'validate'")
+	}
+	if validate.EndLine != 6 {
+		t.Errorf("validate.EndLine = %d, want 6", validate.EndLine)
+	}
+
+	standalone := findByName(funcs, "standalone")
+	if standalone == nil {
+		t.Fatal("expected to find 'standalone'")
+	}
+	if standalone.EndLine != 9 {
+		t.Errorf("standalone.EndLine = %d, want 9", standalone.EndLine)
+	}
+}
+
+func TestPyIndexerEndLineLastFunction(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "main.py", `def main():
+    print("hello")
+    print("world")
+
+`)
+
+	idx := &PyIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("PyIndexer.Index: %v", err)
+	}
+
+	main := findByName(funcs, "main")
+	if main == nil {
+		t.Fatal("expected to find 'main'")
+	}
+	if main.EndLine != 3 {
+		t.Errorf("main.EndLine = %d, want 3", main.EndLine)
+	}
+}
+
+func TestPyIndexerEndLineBlankLinesBetween(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFile(t, dir, "utils.py", `def first():
+    x = 1
+    y = 2
+    return x + y
+
+
+
+def second():
+    return 42
+`)
+
+	idx := &PyIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("PyIndexer.Index: %v", err)
+	}
+
+	first := findByName(funcs, "first")
+	if first == nil {
+		t.Fatal("expected to find 'first'")
+	}
+	if first.EndLine != 4 {
+		t.Errorf("first.EndLine = %d, want 4", first.EndLine)
+	}
+
+	second := findByName(funcs, "second")
+	if second == nil {
+		t.Fatal("expected to find 'second'")
+	}
+	// second starts at line 8, body ends at line 9 (return 42).
+	if second.EndLine != 9 {
+		t.Errorf("second.EndLine = %d, want 9", second.EndLine)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Helper filter tests
 // ---------------------------------------------------------------------------
 
@@ -633,11 +1048,17 @@ func TestIsTSSource(t *testing.T) {
 	}{
 		{"handler.ts", true},
 		{"service.js", true},
+		{"component.tsx", true},
+		{"component.jsx", true},
 		{"types.d.ts", false},
 		{"handler.test.ts", false},
 		{"handler.spec.ts", false},
 		{"handler.test.js", false},
 		{"handler.spec.js", false},
+		{"handler.test.tsx", false},
+		{"handler.test.jsx", false},
+		{"handler.spec.tsx", false},
+		{"handler.spec.jsx", false},
 		{"readme.md", false},
 	}
 	for _, tt := range tests {

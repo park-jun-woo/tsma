@@ -5,22 +5,24 @@ package runner
 import (
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // Run executes the given Python test file against the project.
 func (r *PyRunner) Run(projectRoot, testFile string) (*Result, error) {
-	absTest, err := filepath.Abs(testFile)
-	if err != nil {
-		return &Result{Pass: false, Output: "failed to resolve test path: " + err.Error()}, nil
-	}
+	absTest := filepath.Join(projectRoot, testFile)
 
 	usePytest := detectPytest(projectRoot)
+	python := findPython()
 
 	var cmd *exec.Cmd
 	if usePytest {
-		cmd = exec.Command("python", "-m", "pytest", absTest, "-v")
+		cmd = exec.Command(python, "-m", "pytest", absTest, "-v")
 	} else {
-		cmd = exec.Command("python", "-m", "unittest", absTest, "-v")
+		rel, _ := filepath.Rel(projectRoot, absTest)
+		modulePath := strings.TrimSuffix(rel, ".py")
+		modulePath = strings.ReplaceAll(modulePath, string(filepath.Separator), ".")
+		cmd = exec.Command(python, "-m", "unittest", modulePath, "-v")
 	}
 	cmd.Dir = projectRoot
 

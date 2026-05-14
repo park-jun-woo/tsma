@@ -14,5 +14,5 @@ func containsPytest(path, pattern string) bool {
 		return false
 	}
 	content := strings.ToLower(string(data))
-	return strings.Contains(content, strings.ToLower(pattern)) || strings.Contains(content, "pytest")
+	return strings.Contains(content, strings.ToLower(pattern))
 }

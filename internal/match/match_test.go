@@ -254,6 +254,10 @@ func TestIsTSTestFile(t *testing.T) {
 		{"handler.test.js", true},
 		{"handler.spec.ts", true},
 		{"handler.spec.js", true},
+		{"handler.test.tsx", true},
+		{"handler.test.jsx", true},
+		{"handler.spec.tsx", true},
+		{"handler.spec.jsx", true},
 		{"handler.ts", false},
 		{"handler.go", false},
 	}
@@ -262,5 +266,21 @@ func TestIsTSTestFile(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("isTSTestFile(%q) = %v, want %v", tt.name, got, tt.want)
 		}
+	}
+}
+
+func TestTSMatcherTestTSXFile(t *testing.T) {
+	dir := t.TempDir()
+
+	writeFixture(t, dir, "src/Button.tsx", `export function Button() { return null; }`)
+	writeFixture(t, dir, "src/Button.test.tsx", `describe('Button', () => {});`)
+
+	m := &TSMatcher{}
+	testFile, found := m.Match(dir, "src/Button.tsx")
+	if !found {
+		t.Fatal("expected to find test file for Button.tsx")
+	}
+	if testFile != filepath.Join("src", "Button.test.tsx") {
+		t.Errorf("testFile = %q, unexpected", testFile)
 	}
 }

@@ -40,7 +40,7 @@ func matchPyFunc(line string, lineNum int, relPath, relDir, currentClass string,
 		Name:          name,
 		File:          relPath,
 		StartLine:     lineNum,
-		EndLine:       lineNum,
+		EndLine:       0,
 		Exported:      exported,
 		Status:        model.StatusTodo,
 	}

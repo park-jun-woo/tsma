@@ -18,6 +18,10 @@ func matchTSTopLevelFunc(trimmed, relDir, relPath string, lineNum int) (model.Fu
 	name := m[1]
 	if name == "" {
 		name = m[2]
+		// Phase007: const/let/var matched but no arrow function or function keyword — skip non-function assignments.
+		if name != "" && !strings.Contains(trimmed, "=>") && !strings.Contains(trimmed, "function") {
+			return model.Function{}, false
+		}
 	}
 	if name == "" {
 		return model.Function{}, false

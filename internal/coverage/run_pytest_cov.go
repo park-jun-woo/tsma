@@ -5,11 +5,15 @@ package coverage
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 )
 
 // runPytestCov runs pytest with the --cov flag and JSON output.
 func runPytestCov(projectRoot, testFile, coverJSONPath string) error {
-	cmd := exec.Command("python", "-m", "pytest", testFile,
+	python := findCoveragePython()
+	absTest := filepath.Join(projectRoot, testFile)
+
+	cmd := exec.Command(python, "-m", "pytest", absTest,
 		"--cov",
 		"--cov-report=json:"+coverJSONPath,
 		"--cov-branch",

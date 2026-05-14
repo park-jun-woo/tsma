@@ -24,6 +24,7 @@ func indexTSFile(relPath, absPath string) []model.Function {
 	var currentClass string
 	var classIndent int
 	lineNum := 0
+	lastNonEmptyLine := 0
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -31,7 +32,15 @@ func indexTSFile(relPath, absPath string) []model.Function {
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)
 
+		if trimmed != "" {
+			lastNonEmptyLine = lineNum
+		}
+
 		if m := tsClassPattern.FindStringSubmatch(trimmed); m != nil {
+			// Close previous function's EndLine before starting a new class.
+			if n := len(functions); n > 0 && functions[n-1].EndLine == functions[n-1].StartLine {
+				functions[n-1].EndLine = lastNonEmptyBeforeLine(lineNum, lastNonEmptyLine)
+			}
 			currentClass = m[1]
 			classIndent = countLeadingSpaces(line)
 			continue
@@ -43,14 +52,40 @@ func indexTSFile(relPath, absPath string) []model.Function {
 		}
 
 		if fn, ok := matchTSTopLevelFunc(trimmed, relDir, relPath, lineNum); ok {
+			// Close previous function's EndLine.
+			if n := len(functions); n > 0 && functions[n-1].EndLine == functions[n-1].StartLine {
+				functions[n-1].EndLine = lastNonEmptyBeforeLine(lineNum, lastNonEmptyLine)
+			}
 			functions = append(functions, fn)
 			continue
 		}
 
 		if fn, ok := tryMatchTSMethod(line, currentClass, relDir, relPath, lineNum); ok {
+			// Close previous function's EndLine.
+			if n := len(functions); n > 0 && functions[n-1].EndLine == functions[n-1].StartLine {
+				functions[n-1].EndLine = lastNonEmptyBeforeLine(lineNum, lastNonEmptyLine)
+			}
 			functions = append(functions, fn)
 		}
 	}
 
+	// Close the last function's EndLine at end of file.
+	if n := len(functions); n > 0 && functions[n-1].EndLine == functions[n-1].StartLine {
+		functions[n-1].EndLine = lastNonEmptyLine
+	}
+
 	return functions
+}
+
+// lastNonEmptyBeforeLine returns the last non-empty line number before the
+// current declaration line. If lastNonEmpty is before the current line, use it;
+// otherwise fall back to one line before current.
+func lastNonEmptyBeforeLine(currentLine, lastNonEmpty int) int {
+	if lastNonEmpty < currentLine {
+		return lastNonEmpty
+	}
+	if currentLine > 1 {
+		return currentLine - 1
+	}
+	return currentLine
 }

@@ -20,5 +20,11 @@ func matchesPyPath(covPath, targetFile, projectRoot string) bool {
 
 	normalized := filepath.ToSlash(covPath)
 	normalizedTarget := filepath.ToSlash(targetFile)
-	return strings.HasSuffix(normalized, normalizedTarget)
+	if strings.HasSuffix(normalized, normalizedTarget) {
+		idx := len(normalized) - len(normalizedTarget)
+		if idx == 0 || normalized[idx-1] == '/' {
+			return true
+		}
+	}
+	return false
 }
