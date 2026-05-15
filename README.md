@@ -157,3 +157,7 @@ Give this instruction to your agent:
 ```
 
 The agent only needs to know one command: `tsma next`.
+
+## Related work
+
+[Diffblue Cover](https://www.diffblue.com/) uses reinforcement learning + symbolic execution to generate Java unit tests in a similar generate → verify → feedback loop. tsma takes the same core insight — deterministic verification driving iterative generation — but uses LLMs as the generator, works across Go/TypeScript/Python, and is open source.
