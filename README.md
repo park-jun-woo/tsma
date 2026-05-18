@@ -1,5 +1,8 @@
 # tsma
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
+
 Regression defense for legacy code. Indexes every function, detects missing tests, measures branch coverage, and guides LLM agents to fill the gaps — one function at a time.
 
 ## What tsma does
@@ -10,10 +13,16 @@ Regression defense for legacy code. Indexes every function, detects missing test
 
 Validated on a real project (527 functions): 246 reached 100% (PASS), 281 accepted at best-effort (DONE), 0 remaining (TODO).
 
+## Quick Start
+
+```bash
+npx skills add park-jun-woo/tsma
+```
+
 ## Install
 
 ```bash
-make install
+go install github.com/park-jun-woo/tsma/cmd/tsma@latest
 ```
 
 ## How it works
@@ -162,6 +171,10 @@ The agent only needs to know one command: `tsma next`.
 
 - [REPORT.md](REPORT.md) — tsma self-test (115 functions, PASS 87, DONE 28, coverage 95%)
 - [REPORT.juicer.md](REPORT.juicer.md) — juicer project test (140 functions, PASS 114, DONE 26, coverage 96%)
+
+## Caveat
+
+100% branch coverage does not mean 100% correctness. tsma verifies that every branch is *exercised*, not that every assertion is *meaningful*. A test can hit all branches while checking nothing useful. Treat tsma results as a coverage floor, not a quality ceiling.
 
 ## Related work
 
