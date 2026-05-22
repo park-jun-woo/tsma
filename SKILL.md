@@ -4,7 +4,7 @@ description: Test coverage ratchet for Go, TypeScript, and Python. Indexes every
 license: MIT
 metadata:
   author: park-jun-woo
-  version: "1.0.0"
+  version: "0.2.0"
 ---
 
 # tsma — Test Coverage Ratchet for LLM Agents
@@ -77,7 +77,8 @@ ListContracts  testing...
     line 41 — if params.Status != nil
     line 44 — if params.BuildingId != nil
     line 70 — if err != nil (CountSummary)
-  ▶ Cover the uncovered branches. Next tsma next will re-measure.
+  ▶ Cover the uncovered branches.
+  ▶ After completing the test, run `tsma next`.
 ```
 
 The agent sees exactly which lines to cover — no guessing.
@@ -96,16 +97,7 @@ Functions with **interface dependencies** (mockable) can reach 100%. Functions w
 
 ## Agent Instructions
 
-Give this to your LLM agent:
-
-```
-1. Run `tsma next`
-2. If TODO — read the function, write a test
-3. If test fails — read the error, fix the test
-4. If uncovered branches shown — add tests for those branches
-5. If PASS/DONE — next function is automatically shown
-6. Repeat until "All functions complete!"
-```
+Just run `tsma next`. The output tells the agent exactly what to do and when to run `tsma next` again. The loop continues until "All functions complete!".
 
 ## Validated Results
 

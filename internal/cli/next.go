@@ -42,6 +42,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 	changed, testFile := detectTestChange(root, sess.Lang, fn)
 	if testFile == "" {
 		printTodoFunction(fn, "")
+		printNextInstruction()
 		if err := session.Save(root, sess); err != nil {
 			return fmt.Errorf("save session: %w", err)
 		}
@@ -50,6 +51,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 
 	if !changed {
 		printTodoFunction(fn, testFile)
+		printNextInstruction()
 		if err := session.Save(root, sess); err != nil {
 			return fmt.Errorf("save session: %w", err)
 		}
@@ -66,6 +68,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "FAIL  %s\n", fn.Name)
 		fmt.Fprintf(os.Stderr, "  %s\n", result.failOutput)
 		printTodoFunction(fn, testFile)
+		printNextInstruction()
 
 	case outcomePass:
 		fn.Status = model.StatusPass
@@ -77,7 +80,9 @@ func runNext(cmd *cobra.Command, args []string) error {
 		fmt.Printf("PASS  %s  100%%\n", fn.Name)
 		next := advanceToNext(sess)
 		if next != nil {
+			printContinueInstruction()
 			printTodoFunction(next, next.TestFile)
+			printNextInstruction()
 		} else {
 			fmt.Println("All functions complete!")
 		}
@@ -92,7 +97,9 @@ func runNext(cmd *cobra.Command, args []string) error {
 		fmt.Printf("DONE  %s  %.0f%%\n", fn.Name, result.coveragePct)
 		next := advanceToNext(sess)
 		if next != nil {
+			printContinueInstruction()
 			printTodoFunction(next, next.TestFile)
+			printNextInstruction()
 		} else {
 			fmt.Println("All functions complete!")
 		}
@@ -107,6 +114,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 			fn.Name, result.coveragePct, result.attempt)
 		printUncovered(result.uncovered)
 		printTodoFunction(fn, testFile)
+		printNextInstruction()
 	}
 
 	sess.RecalcSummary()

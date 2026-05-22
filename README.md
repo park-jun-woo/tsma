@@ -100,7 +100,8 @@ ListContracts  testing...
     line 41 — if params.Status != nil
     line 44 — if params.BuildingId != nil
     line 70 — if err != nil (CountSummary)
-  ▶ Cover the uncovered branches. Next tsma next will re-measure.
+  ▶ Cover the uncovered branches.
+  ▶ After completing the test, run `tsma next`.
 ```
 
 ## Principles
@@ -154,18 +155,7 @@ The real implementation runs with all its internal dependencies (DB, external AP
 
 ## For LLM agents
 
-Give this instruction to your agent:
-
-```
-1. Run `tsma next`
-2. If TODO — read the function, write a test
-3. If test fails — read the error, fix the test
-4. If uncovered branches shown — add tests for those branches
-5. If PASS/DONE — next function is automatically shown
-6. Repeat until "All functions complete!"
-```
-
-The agent only needs to know one command: `tsma next`.
+Just run `tsma next`. The output tells the agent exactly what to do and when to run `tsma next` again. The loop continues until "All functions complete!".
 
 ## Reports
 
