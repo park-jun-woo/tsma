@@ -6,10 +6,10 @@ import "fmt"
 
 // printNextInstruction prints the instruction to run tsma next after completing the current task.
 func printNextInstruction() {
-	fmt.Println("  ▶ After completing the test, run `tsma next`.")
+	fmt.Println("  ▶ After completing the test, run `tsma next`. Don't stop. Keep going until complete.")
 }
 
 // printContinueInstruction prints the instruction to run tsma next for the next function.
 func printContinueInstruction() {
-	fmt.Println("  ▶ Run `tsma next` for the next function.")
+	fmt.Println("  ▶ Run `tsma next` for the next function. Don't stop. Keep going until complete.")
 }

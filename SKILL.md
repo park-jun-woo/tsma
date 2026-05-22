@@ -4,7 +4,7 @@ description: Test coverage ratchet for Go, TypeScript, and Python. Indexes every
 license: MIT
 metadata:
   author: park-jun-woo
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # tsma — Test Coverage Ratchet for LLM Agents
