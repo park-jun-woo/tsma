@@ -109,7 +109,8 @@ ListContracts  testing...
 1. **Convention-based test matching.** Go: `handler.go` → `handler_test.go` in the same directory. TS: `.test.ts` / `.spec.ts`. Python: `test_` prefix.
 2. **Session is cache, source files are truth.** If a test file is deleted, the function reverts to TODO regardless of what session.json says.
 3. **Generated code is excluded.** `*_gen.go`, `*.pb.go` are not indexed.
-4. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after one retry.
+4. **`.tsmignore` for custom exclusions.** Place a `.tsmignore` file in the project root to exclude paths from indexing. Same syntax as `.gitignore`.
+5. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after one retry.
 
 ## Why some functions can't reach 100%
 
@@ -144,6 +145,32 @@ type Handler struct {
 The real implementation runs with all its internal dependencies (DB, external APIs). You cannot make it return a specific error or a specific result. Branches that depend on those outcomes are unreachable in unit tests.
 
 **tsma's response:** After one retry with uncovered branch feedback, tsma marks the function as DONE with the achieved coverage. This is not a tool limitation — it reflects the code's testability. Introducing an interface (DI) would make the function fully testable, but that requires modifying the source code.
+
+## .tsmignore
+
+Place a `.tsmignore` file in the project root to exclude files and directories from indexing. Syntax matches `.gitignore`:
+
+```
+# Directories (trailing slash)
+vendor/
+internal/generated/
+
+# File patterns
+*.gen.go
+*.pb.go
+
+# Specific paths
+cmd/legacy/main.go
+```
+
+| Pattern | Matches |
+|---|---|
+| `vendor/` | Directory named `vendor` at any depth |
+| `*.gen.go` | Any file ending in `.gen.go` |
+| `internal/db/` | The `internal/db` directory specifically |
+| `cmd/main.go` | That exact file path |
+
+If no `.tsmignore` exists, tsma uses built-in defaults only (`vendor/`, `.git/`, `.tsma/`, `node_modules/`).
 
 ## Language support
 

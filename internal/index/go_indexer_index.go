@@ -14,11 +14,19 @@ import (
 
 // Index walks the project tree and collects all Go function declarations.
 func (g *GoIndexer) Index(projectRoot string) ([]model.Function, error) {
+	ignorePatterns := ParseTsmIgnore(filepath.Join(projectRoot, ".tsmignore"))
 	fset := token.NewFileSet()
 	var functions []model.Function
 
 	err := filepath.Walk(projectRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			return nil
+		}
+		relPath, _ := filepath.Rel(projectRoot, path)
+		if MatchTsmIgnore(relPath, info.Name(), info.IsDir(), ignorePatterns) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if info.IsDir() {
@@ -33,7 +41,6 @@ func (g *GoIndexer) Index(projectRoot string) ([]model.Function, error) {
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(projectRoot, path)
 		pkgDir := pkgDirOf(relPath)
 		collectGoFunctions(f, fset, relPath, pkgDir, &functions)
 

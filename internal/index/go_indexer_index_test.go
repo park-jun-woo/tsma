@@ -129,3 +129,51 @@ func (r *Router) AddRoute(path string) {
 		t.Error("expected to find AddRoute")
 	}
 }
+
+func TestGoIndexerIndexRespectsIgnore(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a Go file at root
+	rootGo := `package myapp
+
+func Keep() {
+	return
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "keep.go"), []byte(rootGo), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a Go file inside "ignored/" directory
+	ignoredDir := filepath.Join(dir, "ignored")
+	if err := os.MkdirAll(ignoredDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ignoredGo := `package ignored
+
+func Excluded() {
+	return
+}
+`
+	if err := os.WriteFile(filepath.Join(ignoredDir, "excluded.go"), []byte(ignoredGo), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create .tsmignore excluding "ignored/"
+	if err := os.WriteFile(filepath.Join(dir, ".tsmignore"), []byte("ignored/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	idx := &GoIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("GoIndexer.Index: %v", err)
+	}
+
+	if len(funcs) != 1 {
+		t.Fatalf("expected 1 function (ignored/ excluded), got %d", len(funcs))
+	}
+	if funcs[0].Name != "Keep" {
+		t.Errorf("expected Keep, got %s", funcs[0].Name)
+	}
+}

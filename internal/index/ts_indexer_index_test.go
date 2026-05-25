@@ -93,3 +93,39 @@ func TestTSIndexerIndexEmptyProject(t *testing.T) {
 		t.Errorf("expected 0 functions, got %d", len(funcs))
 	}
 }
+
+func TestTSIndexerIndexRespectsIgnore(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a TS file at root
+	if err := os.WriteFile(filepath.Join(dir, "index.ts"), []byte("export function keep() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a TS file inside "generated/" directory
+	genDir := filepath.Join(dir, "generated")
+	if err := os.MkdirAll(genDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(genDir, "auto.ts"), []byte("export function auto() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create .tsmignore excluding "generated/"
+	if err := os.WriteFile(filepath.Join(dir, ".tsmignore"), []byte("generated/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	idx := &TSIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("TSIndexer.Index: %v", err)
+	}
+
+	if len(funcs) != 1 {
+		t.Fatalf("expected 1 function (generated/ skipped), got %d", len(funcs))
+	}
+	if funcs[0].Name != "keep" {
+		t.Errorf("expected keep, got %s", funcs[0].Name)
+	}
+}
