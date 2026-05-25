@@ -95,6 +95,10 @@ Functions with **interface dependencies** (mockable) can reach 100%. Functions w
 | TypeScript | regex | `npx vitest` / `npx jest` | `c8` / `istanbul` |
 | Python | regex | `pytest` | `coverage.py` |
 
+## IMPORTANT: Do NOT modify .tsmignore
+
+**NEVER add files or directories to `.tsmignore` to skip writing tests.** `.tsmignore` exists solely for the project owner to exclude generated code or vendored dependencies. Using it to avoid test writing defeats the entire purpose of tsma. If a function is hard to test, write the best test you can — tsma will mark it DONE after one retry. Do not circumvent the process.
+
 ## Agent Instructions
 
 Just run `tsma next`. The output tells the agent exactly what to do and when to run `tsma next` again. The loop continues until "All functions complete!".
