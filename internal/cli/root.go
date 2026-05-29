@@ -26,6 +26,7 @@ pass/fail status, and measures branch coverage.`,
 func Execute(version string) {
 	Version = version
 	rootCmd.Version = version
+	rootCmd.SetVersionTemplate(fmt.Sprintf("tsma version %s\nMust read %s\n", version, findReadme()))
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -37,4 +38,5 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(resetCmd)
+	rootCmd.AddCommand(versionCmd)
 }
