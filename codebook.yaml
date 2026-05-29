@@ -24,3 +24,6 @@ optional:
     go: "Go language support"
     typescript: "TypeScript language support"
     python: "Python language support"
+    csharp: "C# language support"
+    java: "Java language support"
+    rust: "Rust language support"

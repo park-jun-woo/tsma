@@ -89,6 +89,81 @@ func TestDetectPythonSetupPy(t *testing.T) {
 	}
 }
 
+func TestDetectRust(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"demo\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	lf, err := Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if lf.Lang != "rust" {
+		t.Errorf("Lang = %q, want rust", lf.Lang)
+	}
+}
+
+func TestDetectJavaMaven(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	lf, err := Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if lf.Lang != "java" {
+		t.Errorf("Lang = %q, want java", lf.Lang)
+	}
+}
+
+func TestDetectJavaGradle(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "build.gradle"), []byte("plugins {}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	lf, err := Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if lf.Lang != "java" {
+		t.Errorf("Lang = %q, want java", lf.Lang)
+	}
+}
+
+func TestDetectJavaGradleKts(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "build.gradle.kts"), []byte("plugins {}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	lf, err := Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if lf.Lang != "java" {
+		t.Errorf("Lang = %q, want java", lf.Lang)
+	}
+}
+
+func TestDetectCSharp(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "App.csproj"), []byte("<Project/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	lf, err := Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if lf.Lang != "csharp" {
+		t.Errorf("Lang = %q, want csharp", lf.Lang)
+	}
+}
+
 func TestDetectGoPriority(t *testing.T) {
 	// When both go.mod and package.json exist, Go wins.
 	dir := t.TempDir()

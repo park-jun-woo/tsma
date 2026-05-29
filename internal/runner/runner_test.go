@@ -34,21 +34,21 @@ func TestNewRunnerPython(t *testing.T) {
 }
 
 func TestNewRunnerUnsupported(t *testing.T) {
-	r := NewRunner("rust")
+	r := NewRunner("kotlin")
 	u, ok := r.(*UnsupportedRunner)
 	if !ok {
-		t.Fatalf("NewRunner(\"rust\") returned %T, want *UnsupportedRunner", r)
+		t.Fatalf("NewRunner(\"kotlin\") returned %T, want *UnsupportedRunner", r)
 	}
-	if u.Lang != "rust" {
-		t.Errorf("UnsupportedRunner.Lang = %q, want %q", u.Lang, "rust")
+	if u.Lang != "kotlin" {
+		t.Errorf("UnsupportedRunner.Lang = %q, want %q", u.Lang, "kotlin")
 	}
 
-	_, err := r.Run("/tmp", "main_test.rs")
+	_, err := r.Run("/tmp", "MainTest.kt")
 	if err == nil {
 		t.Fatal("UnsupportedRunner.Run should return an error")
 	}
-	if !strings.Contains(err.Error(), "rust") {
-		t.Errorf("error should mention 'rust': %v", err)
+	if !strings.Contains(err.Error(), "kotlin") {
+		t.Errorf("error should mention 'kotlin': %v", err)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 	"github.com/park-jun-woo/tsma/internal/session"
 	"github.com/spf13/cobra"
@@ -42,7 +43,11 @@ func runNext(cmd *cobra.Command, args []string) error {
 	changed, testFile := detectTestChange(root, sess.Lang, fn)
 	if testFile == "" {
 		printTodoFunction(fn, "")
-		printNextInstruction()
+		if misnamed, canonical, found := match.FindMisnamedTest(root, sess.Lang, fn.File); found {
+			printRenameInstruction(misnamed, canonical)
+		} else {
+			printNextInstruction()
+		}
 		if err := session.Save(root, sess); err != nil {
 			return fmt.Errorf("save session: %w", err)
 		}

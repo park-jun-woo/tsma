@@ -1,6 +1,6 @@
 # tsma
 
-[![Version](https://img.shields.io/badge/version-v0.2.2-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
+[![Version](https://img.shields.io/badge/version-v0.3.0-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
 
@@ -107,7 +107,7 @@ ListContracts  testing...
 
 ## Principles
 
-1. **Convention-based test matching.** Go: `handler.go` → `handler_test.go` in the same directory. TS: `.test.ts` / `.spec.ts`. Python: `test_` prefix.
+1. **Convention-based test matching.** Go: `handler.go` → `handler_test.go` in the same directory. TS: `.test.ts` / `.spec.ts`. Python: `test_` prefix. Rust: in-file `#[cfg(test)] mod tests` or `tests/*.rs`. Java: `src/main/java/…/Foo.java` → `src/test/java/…/FooTest.java`. C#: `Foo.cs` → `FooTests.cs` / `FooTest.cs` (incl. `*.Tests/` projects).
 2. **Session is cache, source files are truth.** If a test file is deleted, the function reverts to TODO regardless of what session.json says.
 3. **Generated code is excluded.** `*_gen.go`, `*.pb.go` are not indexed.
 4. **`.tsmignore` for custom exclusions.** Place a `.tsmignore` file in the project root to exclude paths from indexing. Same syntax as `.gitignore`.
@@ -175,11 +175,14 @@ If no `.tsmignore` exists, tsma uses built-in defaults only (`vendor/`, `.git/`,
 
 ## Language support
 
-| Language | Indexer | Test runner | Coverage |
-|---|---|---|---|
-| Go | `go/ast` | `go test` | `go test -coverprofile` |
-| TypeScript | regex | `npx vitest` / `npx jest` | `c8` / `istanbul` |
-| Python | regex | `pytest` | `coverage.py` |
+| Language | Detect marker | Indexer | Test runner | Coverage | Toolchain |
+|---|---|---|---|---|---|
+| Go | `go.mod` | `go/ast` | `go test` | `go test -coverprofile` | Go |
+| TypeScript | `package.json` | regex | `npx vitest` / `npx jest` | `c8` / `istanbul` | Node.js |
+| Python | `pyproject.toml` / `requirements.txt` / `setup.py` | regex | `pytest` | `coverage.py` | Python + pytest |
+| Rust | `Cargo.toml` | regex | `cargo test` | `cargo llvm-cov` (llvm-cov) | cargo + `cargo-llvm-cov` (`llvm-tools-preview`) |
+| Java | `pom.xml` / `build.gradle` / `build.gradle.kts` | regex | `mvn -Dtest=…` / `gradle test --tests` | JaCoCo (`jacoco.xml`) | JDK + Maven or Gradle + JaCoCo plugin |
+| C# | `*.csproj` / `*.sln` / `Directory.Build.props` | regex | `dotnet test --filter` | Cobertura via coverlet | .NET SDK + coverlet (`coverlet.collector`) |
 
 ## For LLM agents
 
@@ -196,4 +199,4 @@ Just run `tsma next`. The output tells the agent exactly what to do and when to 
 
 ## Related work
 
-[Diffblue Cover](https://www.diffblue.com/) uses reinforcement learning + symbolic execution to generate Java unit tests in a similar generate → verify → feedback loop. tsma takes the same core insight — deterministic verification driving iterative generation — but uses LLMs as the generator, works across Go/TypeScript/Python, and is open source.
+[Diffblue Cover](https://www.diffblue.com/) uses reinforcement learning + symbolic execution to generate Java unit tests in a similar generate → verify → feedback loop. tsma takes the same core insight — deterministic verification driving iterative generation — but uses LLMs as the generator, works across Go/TypeScript/Python/Rust/Java/C#, and is open source.

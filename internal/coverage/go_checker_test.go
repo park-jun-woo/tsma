@@ -87,17 +87,24 @@ func TestNewCheckerPython(t *testing.T) {
 	}
 }
 
-func TestNewCheckerUnsupported(t *testing.T) {
+func TestNewCheckerRust(t *testing.T) {
 	c := NewChecker("rust")
+	if _, ok := c.(*RsChecker); !ok {
+		t.Errorf("NewChecker(\"rust\") returned %T, want *RsChecker", c)
+	}
+}
+
+func TestNewCheckerUnsupported(t *testing.T) {
+	c := NewChecker("kotlin")
 	u, ok := c.(*UnsupportedChecker)
 	if !ok {
-		t.Fatalf("NewChecker(\"rust\") returned %T, want *UnsupportedChecker", c)
+		t.Fatalf("NewChecker(\"kotlin\") returned %T, want *UnsupportedChecker", c)
 	}
-	if u.Lang != "rust" {
-		t.Errorf("UnsupportedChecker.Lang = %q, want %q", u.Lang, "rust")
+	if u.Lang != "kotlin" {
+		t.Errorf("UnsupportedChecker.Lang = %q, want %q", u.Lang, "kotlin")
 	}
 
-	_, err := c.Check("/tmp", "main_test.rs", &model.Function{})
+	_, err := c.Check("/tmp", "MainTest.kt", &model.Function{})
 	if err == nil {
 		t.Fatal("UnsupportedChecker.Check should return an error")
 	}
@@ -107,8 +114,8 @@ func TestNewCheckerUnsupported(t *testing.T) {
 	} else {
 		unsupErr = e
 	}
-	if unsupErr != nil && !strings.Contains(unsupErr.Error(), "rust") {
-		t.Errorf("error should mention 'rust': %v", unsupErr)
+	if unsupErr != nil && !strings.Contains(unsupErr.Error(), "kotlin") {
+		t.Errorf("error should mention 'kotlin': %v", unsupErr)
 	}
 }
 

@@ -11,6 +11,12 @@ func NewChecker(lang string) Checker {
 		return &TSChecker{}
 	case "python":
 		return &PyChecker{}
+	case "rust":
+		return &RsChecker{}
+	case "java":
+		return &JavaChecker{}
+	case "csharp":
+		return &CsChecker{}
 	default:
 		return &UnsupportedChecker{Lang: lang}
 	}

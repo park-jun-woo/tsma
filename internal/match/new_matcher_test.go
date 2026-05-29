@@ -23,9 +23,30 @@ func TestNewMatcherReturnsPyMatcher(t *testing.T) {
 	}
 }
 
-func TestNewMatcherReturnsUnsupported(t *testing.T) {
+func TestNewMatcherReturnsRsMatcher(t *testing.T) {
 	m := NewMatcher("rust")
-	_, found := m.Match("/tmp", "handler.rs")
+	if _, ok := m.(*RsMatcher); !ok {
+		t.Errorf("NewMatcher(\"rust\") returned %T, want *RsMatcher", m)
+	}
+}
+
+func TestNewMatcherReturnsJavaMatcher(t *testing.T) {
+	m := NewMatcher("java")
+	if _, ok := m.(*JavaMatcher); !ok {
+		t.Errorf("NewMatcher(\"java\") returned %T, want *JavaMatcher", m)
+	}
+}
+
+func TestNewMatcherReturnsCsMatcher(t *testing.T) {
+	m := NewMatcher("csharp")
+	if _, ok := m.(*CsMatcher); !ok {
+		t.Errorf("NewMatcher(\"csharp\") returned %T, want *CsMatcher", m)
+	}
+}
+
+func TestNewMatcherReturnsUnsupported(t *testing.T) {
+	m := NewMatcher("kotlin")
+	_, found := m.Match("/tmp", "handler.kt")
 	if found {
 		t.Error("unsupported matcher should return found=false")
 	}

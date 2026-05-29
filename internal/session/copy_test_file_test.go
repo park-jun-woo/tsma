@@ -66,6 +66,41 @@ func TestCopyTestFileNonexistentSource(t *testing.T) {
 	}
 }
 
+func TestCopyTestFileMkdirError(t *testing.T) {
+	dir := t.TempDir()
+
+	srcPath := filepath.Join(dir, "handler_test.go")
+	if err := os.WriteFile(srcPath, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Make .tsma a regular file so MkdirAll(.tsma/tests) fails.
+	if err := os.WriteFile(filepath.Join(dir, ".tsma"), []byte("not a dir"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := CopyTestFile(dir, srcPath); err == nil {
+		t.Fatal("expected error when tests dir cannot be created")
+	}
+}
+
+func TestCopyTestFileWriteError(t *testing.T) {
+	dir := t.TempDir()
+
+	srcPath := filepath.Join(dir, "handler_test.go")
+	if err := os.WriteFile(srcPath, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Pre-create the destination path as a directory so os.WriteFile fails.
+	dstDir := filepath.Join(dir, ".tsma", "tests", "handler_test.go")
+	if err := os.MkdirAll(dstDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := CopyTestFile(dir, srcPath); err == nil {
+		t.Fatal("expected error when destination cannot be written")
+	}
+}
+
 func TestCopyTestFilePreservesContent(t *testing.T) {
 	dir := t.TempDir()
 

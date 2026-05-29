@@ -23,13 +23,34 @@ func TestNewIndexerReturnsPyIndexer(t *testing.T) {
 	}
 }
 
-func TestNewIndexerReturnsUnsupported(t *testing.T) {
+func TestNewIndexerReturnsRsIndexer(t *testing.T) {
 	idx := NewIndexer("rust")
+	if _, ok := idx.(*RsIndexer); !ok {
+		t.Errorf("NewIndexer(\"rust\") returned %T, want *RsIndexer", idx)
+	}
+}
+
+func TestNewIndexerReturnsJavaIndexer(t *testing.T) {
+	idx := NewIndexer("java")
+	if _, ok := idx.(*JavaIndexer); !ok {
+		t.Errorf("NewIndexer(\"java\") returned %T, want *JavaIndexer", idx)
+	}
+}
+
+func TestNewIndexerReturnsCsIndexer(t *testing.T) {
+	idx := NewIndexer("csharp")
+	if _, ok := idx.(*CsIndexer); !ok {
+		t.Errorf("NewIndexer(\"csharp\") returned %T, want *CsIndexer", idx)
+	}
+}
+
+func TestNewIndexerReturnsUnsupported(t *testing.T) {
+	idx := NewIndexer("kotlin")
 	u, ok := idx.(*UnsupportedIndexer)
 	if !ok {
-		t.Fatalf("NewIndexer(\"rust\") returned %T, want *UnsupportedIndexer", idx)
+		t.Fatalf("NewIndexer(\"kotlin\") returned %T, want *UnsupportedIndexer", idx)
 	}
-	if u.Lang != "rust" {
-		t.Errorf("UnsupportedIndexer.Lang = %q, want %q", u.Lang, "rust")
+	if u.Lang != "kotlin" {
+		t.Errorf("UnsupportedIndexer.Lang = %q, want %q", u.Lang, "kotlin")
 	}
 }

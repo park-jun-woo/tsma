@@ -20,6 +20,22 @@ func TestMatchPatternTrailingSlashNestedDir(t *testing.T) {
 	}
 }
 
+func TestMatchPatternTrailingSlashMidPathSegment(t *testing.T) {
+	// dirPattern appears as an interior path segment (not a suffix and the
+	// directory name itself differs) -> exercises the Contains() branch.
+	if !matchPattern("a/build/c", "c", true, "build/") {
+		t.Error("expected build/ to match interior segment of a/build/c")
+	}
+}
+
+func TestMatchPatternTrailingSlashNoMatch(t *testing.T) {
+	// A directory whose name/path neither equals, suffixes, nor contains the
+	// dir pattern segment -> all dir branches return false.
+	if matchPattern("src/lib", "lib", true, "build/") {
+		t.Error("expected build/ to not match src/lib")
+	}
+}
+
 func TestMatchPatternWithSlash(t *testing.T) {
 	// Pattern "internal/tmp/*.go" should match path glob
 	if !matchPattern("internal/tmp/foo.go", "foo.go", false, "internal/tmp/*.go") {

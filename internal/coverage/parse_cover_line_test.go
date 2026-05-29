@@ -43,6 +43,12 @@ func TestParseCoverLineInvalid(t *testing.T) {
 	}{
 		{"no spaces", "nospaces"},
 		{"only one space", "one space"},
+		// Passes splitCoverLineParts but the file/pos part has no colon ->
+		// extractCoverFile returns an error.
+		{"no colon in file part", "nocolon 3 1"},
+		// Valid file:pos prefix, but positions contain an extra comma so
+		// parseCoverPositions fails (3 parts instead of 2).
+		{"bad positions", "file.go:1.1,2.2,3.3 3 1"},
 	}
 
 	for _, tt := range tests {

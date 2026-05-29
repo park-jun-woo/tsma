@@ -23,14 +23,35 @@ func TestNewRunnerReturnsPyRunner(t *testing.T) {
 	}
 }
 
-func TestNewRunnerReturnsUnsupported(t *testing.T) {
+func TestNewRunnerReturnsRsRunner(t *testing.T) {
 	r := NewRunner("rust")
+	if _, ok := r.(*RsRunner); !ok {
+		t.Errorf("NewRunner(\"rust\") returned %T, want *RsRunner", r)
+	}
+}
+
+func TestNewRunnerReturnsJavaRunner(t *testing.T) {
+	r := NewRunner("java")
+	if _, ok := r.(*JavaRunner); !ok {
+		t.Errorf("NewRunner(\"java\") returned %T, want *JavaRunner", r)
+	}
+}
+
+func TestNewRunnerReturnsCsRunner(t *testing.T) {
+	r := NewRunner("csharp")
+	if _, ok := r.(*CsRunner); !ok {
+		t.Errorf("NewRunner(\"csharp\") returned %T, want *CsRunner", r)
+	}
+}
+
+func TestNewRunnerReturnsUnsupported(t *testing.T) {
+	r := NewRunner("kotlin")
 	u, ok := r.(*UnsupportedRunner)
 	if !ok {
-		t.Fatalf("NewRunner(\"rust\") returned %T, want *UnsupportedRunner", r)
+		t.Fatalf("NewRunner(\"kotlin\") returned %T, want *UnsupportedRunner", r)
 	}
-	if u.Lang != "rust" {
-		t.Errorf("Lang = %q, want %q", u.Lang, "rust")
+	if u.Lang != "kotlin" {
+		t.Errorf("Lang = %q, want %q", u.Lang, "kotlin")
 	}
 }
 

@@ -23,14 +23,35 @@ func TestNewCheckerReturnsPyChecker(t *testing.T) {
 	}
 }
 
-func TestNewCheckerReturnsUnsupported(t *testing.T) {
+func TestNewCheckerReturnsRsChecker(t *testing.T) {
+	c := NewChecker("rust")
+	if _, ok := c.(*RsChecker); !ok {
+		t.Fatalf("NewChecker(\"rust\") returned %T, want *RsChecker", c)
+	}
+}
+
+func TestNewCheckerReturnsJavaChecker(t *testing.T) {
 	c := NewChecker("java")
+	if _, ok := c.(*JavaChecker); !ok {
+		t.Fatalf("NewChecker(\"java\") returned %T, want *JavaChecker", c)
+	}
+}
+
+func TestNewCheckerReturnsCsChecker(t *testing.T) {
+	c := NewChecker("csharp")
+	if _, ok := c.(*CsChecker); !ok {
+		t.Fatalf("NewChecker(\"csharp\") returned %T, want *CsChecker", c)
+	}
+}
+
+func TestNewCheckerReturnsUnsupported(t *testing.T) {
+	c := NewChecker("kotlin")
 	u, ok := c.(*UnsupportedChecker)
 	if !ok {
-		t.Fatalf("NewChecker(\"java\") returned %T, want *UnsupportedChecker", c)
+		t.Fatalf("NewChecker(\"kotlin\") returned %T, want *UnsupportedChecker", c)
 	}
-	if u.Lang != "java" {
-		t.Errorf("Lang = %q, want %q", u.Lang, "java")
+	if u.Lang != "kotlin" {
+		t.Errorf("Lang = %q, want %q", u.Lang, "kotlin")
 	}
 }
 

@@ -10,6 +10,31 @@ import (
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
+// TestRunStatus_getProjectRootError covers the getProjectRoot error branch
+// (line 21) by removing the cwd so os.Getwd() fails.
+func TestRunStatus_getProjectRootError(t *testing.T) {
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	defer os.Chdir(orig)
+
+	dir := t.TempDir()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	if err := os.Remove(dir); err != nil {
+		t.Skipf("could not remove cwd: %v", err)
+	}
+	if _, gErr := os.Getwd(); gErr == nil {
+		t.Skip("os.Getwd did not fail after removing cwd on this platform")
+	}
+
+	if err := runStatus(nil, nil); err == nil {
+		t.Fatal("expected error when getProjectRoot fails")
+	}
+}
+
 func TestRunStatus_noSession(t *testing.T) {
 	dir := t.TempDir()
 
@@ -67,6 +92,24 @@ func TestRunStatus_withSession(t *testing.T) {
 	}
 	if !strings.Contains(output, "Coverage average") {
 		t.Error("expected coverage average in output")
+	}
+}
+
+func TestRunStatus_corruptSession(t *testing.T) {
+	dir := t.TempDir()
+
+	sessDir := filepath.Join(dir, ".tsma")
+	os.MkdirAll(sessDir, 0o755)
+	// Exists true, Load fails -> error from the load branch.
+	os.WriteFile(filepath.Join(sessDir, "session.json"), []byte("{broken"), 0o644)
+
+	orig, _ := os.Getwd()
+	defer os.Chdir(orig)
+	os.Chdir(dir)
+
+	err := runStatus(nil, nil)
+	if err == nil {
+		t.Fatal("expected error loading corrupt session")
 	}
 }
 

@@ -89,6 +89,67 @@ func TestPyIndexerIndexEmptyProject(t *testing.T) {
 	}
 }
 
+func TestPyIndexerIndexIgnoresFile(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "keep.py"), []byte("def keep(): pass\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A specific ignored FILE -> file-ignore branch returns nil (no SkipDir).
+	if err := os.WriteFile(filepath.Join(dir, "ignoreme.py"), []byte("def skipped(): pass\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".tsmignore"), []byte("ignoreme.py\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	idx := &PyIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("PyIndexer.Index: %v", err)
+	}
+	if len(funcs) != 1 || funcs[0].Name != "keep" {
+		t.Fatalf("expected only keep, got %+v", funcs)
+	}
+}
+
+func TestPyIndexerIndexWalkError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root; unreadable-dir walk error does not apply")
+	}
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "keep.py"), []byte("def keep(): pass\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(dir, "locked")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "inner.py"), []byte("def inner(): pass\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(sub, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(sub, 0o755) })
+
+	idx := &PyIndexer{}
+	funcs, err := idx.Index(dir)
+	if err != nil {
+		t.Fatalf("expected success despite walk error, got: %v", err)
+	}
+	found := false
+	for _, fn := range funcs {
+		if fn.Name == "keep" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected keep to still be indexed")
+	}
+}
+
 func TestPyIndexerIndexRespectsIgnore(t *testing.T) {
 	dir := t.TempDir()
 

@@ -54,6 +54,30 @@ func TestComputeFuncCoverageNoMatchingBlocks(t *testing.T) {
 	}
 }
 
+func TestComputeFuncCoverageNonOverlappingBlock(t *testing.T) {
+	blocks := []coverBlock{
+		// Different file -> does not overlap -> continue (covers the skip branch).
+		{file: "github.com/example/pkg/other.go", startLine: 10, endLine: 15, count: 1},
+		// Same file but line range outside the function -> does not overlap.
+		{file: "github.com/example/pkg/handler.go", startLine: 100, endLine: 110, count: 1},
+		// Overlapping, covered block -> counted.
+		{file: "github.com/example/pkg/handler.go", startLine: 10, endLine: 15, count: 1},
+	}
+
+	r := funcRange{file: "pkg/handler.go", startLine: 10, endLine: 20, funcName: "Handler"}
+	fc := computeFuncCoverage(r, blocks, "/project")
+
+	if fc.TotalBlocks != 1 {
+		t.Errorf("TotalBlocks = %d, want 1 (non-overlapping blocks skipped)", fc.TotalBlocks)
+	}
+	if fc.CoveredBlocks != 1 {
+		t.Errorf("CoveredBlocks = %d, want 1", fc.CoveredBlocks)
+	}
+	if fc.CoveredPct != 100 {
+		t.Errorf("CoveredPct = %f, want 100", fc.CoveredPct)
+	}
+}
+
 func TestComputeFuncCoverageKey(t *testing.T) {
 	r := funcRange{file: "pkg/handler.go", startLine: 10, endLine: 20, funcName: "Handler"}
 	fc := computeFuncCoverage(r, nil, "/project")

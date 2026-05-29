@@ -67,6 +67,25 @@ func TestMatchesCoverageKey(t *testing.T) {
 			projectRoot:   "",
 			want:          true,
 		},
+		{
+			// No direct/suffix match and empty project root -> early false return.
+			name:          "no match with empty project root",
+			key:           "src/other.ts",
+			normalizedRel: "src/handler.ts",
+			relFile:       "src/handler.ts",
+			projectRoot:   "",
+			want:          false,
+		},
+		{
+			// Suffix mismatch (normalizedRel is not a suffix of the key) but the
+			// absolute project-root + relFile join matches exactly.
+			name:          "absolute match only via join",
+			key:           "/project/deep/handler.ts",
+			normalizedRel: "src/handler.ts",
+			relFile:       "deep/handler.ts",
+			projectRoot:   "/project",
+			want:          true,
+		},
 	}
 
 	for _, tt := range tests {

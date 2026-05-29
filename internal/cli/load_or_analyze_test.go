@@ -38,6 +38,39 @@ func TestLoadOrAnalyze_existingSession(t *testing.T) {
 	}
 }
 
+func TestLoadOrAnalyze_corruptSession(t *testing.T) {
+	dir := t.TempDir()
+
+	sessDir := filepath.Join(dir, ".tsma")
+	os.MkdirAll(sessDir, 0o755)
+	// Invalid JSON: Exists is true but Load fails.
+	os.WriteFile(filepath.Join(sessDir, "session.json"), []byte("{broken"), 0o644)
+
+	_, err := loadOrAnalyze(dir)
+	if err == nil {
+		t.Fatal("expected error loading corrupt session")
+	}
+}
+
+func TestLoadOrAnalyze_saveError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root; read-only dir permission check does not apply")
+	}
+	dir := t.TempDir()
+
+	// Valid Go project so analyzeProject succeeds, but make .tsma a file so
+	// session.Save cannot create the directory/write the session.
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644)
+	// Create .tsma as a regular file so MkdirAll inside Save fails.
+	os.WriteFile(filepath.Join(dir, ".tsma"), []byte("not a dir"), 0o644)
+
+	_, err := loadOrAnalyze(dir)
+	if err == nil {
+		t.Fatal("expected error when session cannot be saved")
+	}
+}
+
 func TestLoadOrAnalyze_noSession_emptyDir(t *testing.T) {
 	dir := t.TempDir()
 

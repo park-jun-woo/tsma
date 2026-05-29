@@ -11,6 +11,12 @@ func NewRunner(lang string) Runner {
 		return &TSRunner{}
 	case "python":
 		return &PyRunner{}
+	case "rust":
+		return &RsRunner{}
+	case "java":
+		return &JavaRunner{}
+	case "csharp":
+		return &CsRunner{}
 	default:
 		return &UnsupportedRunner{Lang: lang}
 	}

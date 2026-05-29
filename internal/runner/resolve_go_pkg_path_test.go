@@ -47,6 +47,15 @@ func TestResolveGoPkgPathNestedPackage(t *testing.T) {
 	}
 }
 
+func TestResolveGoPkgPathRelError(t *testing.T) {
+	// An absolute project root and a relative test path cannot be made relative
+	// to each other -> filepath.Rel returns an error.
+	_, err := resolveGoPkgPath("/home/user/myproject", "relative/handler_test.go")
+	if err == nil {
+		t.Fatal("expected error when paths cannot be made relative")
+	}
+}
+
 func TestResolveGoPkgPathUsesForwardSlash(t *testing.T) {
 	// Even on systems that use backslash, result should use forward slash.
 	projectRoot := "/home/user/myproject"

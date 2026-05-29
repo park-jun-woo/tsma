@@ -30,5 +30,20 @@ func Detect(projectRoot string) (*LangFramework, error) {
 		return &LangFramework{Lang: "python"}, nil
 	}
 
+	// Rust
+	if _, err := os.Stat(filepath.Join(projectRoot, "Cargo.toml")); err == nil {
+		return &LangFramework{Lang: "rust"}, nil
+	}
+
+	// Java (Maven or Gradle)
+	if detectJavaBuildTool(projectRoot) != "" {
+		return &LangFramework{Lang: "java"}, nil
+	}
+
+	// C# (.NET): *.csproj / *.sln (glob) or Directory.Build.props (fixed name)
+	if detectCSharp(projectRoot) {
+		return &LangFramework{Lang: "csharp"}, nil
+	}
+
 	return nil, ErrUnsupportedLanguage
 }

@@ -11,6 +11,12 @@ func NewMatcher(lang string) Matcher {
 		return &TSMatcher{}
 	case "python":
 		return &PyMatcher{}
+	case "rust":
+		return &RsMatcher{}
+	case "java":
+		return &JavaMatcher{}
+	case "csharp":
+		return &CsMatcher{}
 	default:
 		return &unsupportedMatcher{}
 	}

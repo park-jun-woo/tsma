@@ -1,10 +1,10 @@
 ---
 name: tsma
-description: Test coverage ratchet for Go, TypeScript, and Python. Indexes every function, detects missing tests, measures branch coverage, and guides LLM agents to fill gaps one function at a time. Use this skill when writing unit tests for legacy codebases, measuring test coverage, or running test-generation loops with LLM agents. Triggers on tasks involving tsma commands, test coverage improvement, or missing test detection.
+description: Test coverage ratchet for Go, TypeScript, Python, Rust, Java, and C#. Indexes every function, detects missing tests, measures branch coverage, and guides LLM agents to fill gaps one function at a time. Use this skill when writing unit tests for legacy codebases, measuring test coverage, or running test-generation loops with LLM agents. Triggers on tasks involving tsma commands, test coverage improvement, or missing test detection.
 license: MIT
 metadata:
   author: park-jun-woo
-  version: "0.2.2"
+  version: "0.3.0"
 ---
 
 # tsma — Test Coverage Ratchet for LLM Agents
@@ -89,11 +89,16 @@ Functions with **interface dependencies** (mockable) can reach 100%. Functions w
 
 ## Language Support
 
-| Language | Indexer | Test runner | Coverage |
-|---|---|---|---|
-| Go | `go/ast` | `go test` | `go test -coverprofile` |
-| TypeScript | regex | `npx vitest` / `npx jest` | `c8` / `istanbul` |
-| Python | regex | `pytest` | `coverage.py` |
+| Language | Detect marker | Test runner | Coverage | Toolchain |
+|---|---|---|---|---|
+| Go | `go.mod` | `go test` | `go test -coverprofile` | Go |
+| TypeScript | `package.json` | `npx vitest` / `npx jest` | `c8` / `istanbul` | Node.js |
+| Python | `pyproject.toml` / `requirements.txt` / `setup.py` | `pytest` | `coverage.py` | Python + pytest |
+| Rust | `Cargo.toml` | `cargo test` | `cargo llvm-cov` | cargo + `cargo-llvm-cov` (`llvm-tools-preview`) |
+| Java | `pom.xml` / `build.gradle(.kts)` | `mvn` / `gradle test` | JaCoCo | JDK + Maven or Gradle + JaCoCo plugin |
+| C# | `*.csproj` / `*.sln` / `Directory.Build.props` | `dotnet test` | Cobertura via coverlet | .NET SDK + coverlet |
+
+Indexers are AST-based for Go and regex-based for all other languages.
 
 ## IMPORTANT: Do NOT modify .tsmignore
 

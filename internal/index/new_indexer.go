@@ -11,6 +11,12 @@ func NewIndexer(lang string) Indexer {
 		return &TSIndexer{}
 	case "python":
 		return &PyIndexer{}
+	case "rust":
+		return &RsIndexer{}
+	case "java":
+		return &JavaIndexer{}
+	case "csharp":
+		return &CsIndexer{}
 	default:
 		return &UnsupportedIndexer{Lang: lang}
 	}
