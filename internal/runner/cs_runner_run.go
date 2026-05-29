@@ -2,7 +2,11 @@
 //ff:what Executes C# tests for the given test file using dotnet test with a class filter
 package runner
 
-import "os/exec"
+import (
+	"os/exec"
+
+	"github.com/park-jun-woo/tsma/internal/match"
+)
 
 // E2E note: running this path requires a working .NET SDK (`dotnet`), which is
 // not available in CI/sandbox environments. The argument builder is split out
@@ -10,7 +14,8 @@ import "os/exec"
 
 // Run executes the given C# test file against the project using `dotnet test`,
 // filtering to the single test class derived from the file name.
-func (r *CsRunner) Run(projectRoot, testFile string) (*Result, error) {
+func (r *CsRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
+	testFile := testFileFromMatch(m)
 	dotnet, err := findDotnet()
 	if err != nil {
 		return nil, err

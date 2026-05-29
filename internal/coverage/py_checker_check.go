@@ -7,11 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
 // Check runs pytest with coverage and parses the results.
-func (c *PyChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
+func (c *PyChecker) Check(projectRoot string, m match.TestMatch, fn *model.Function) (*Report, error) {
+	testFile := testFileFromMatch(m)
 	absTest, err := filepath.Abs(testFile)
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)

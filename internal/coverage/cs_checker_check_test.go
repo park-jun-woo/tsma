@@ -28,7 +28,7 @@ func TestCsCheckerCheckToolNotFound(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
 	c := &CsChecker{}
-	_, err := c.Check(t.TempDir(), "App.Tests/CalculatorTests.cs",
+	_, err := c.Check(t.TempDir(), mkMatch("App.Tests/CalculatorTests.cs"),
 		&model.Function{File: "App/Calculator.cs", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when dotnet is not found on PATH")
@@ -41,7 +41,7 @@ func TestCsCheckerCheckToolNotFound(t *testing.T) {
 func TestCsCheckerCheckRunFails(t *testing.T) {
 	proj := fakeDotnet(t, "exit 1\n")
 	c := &CsChecker{}
-	_, err := c.Check(proj, "App.Tests/CalculatorTests.cs",
+	_, err := c.Check(proj, mkMatch("App.Tests/CalculatorTests.cs"),
 		&model.Function{File: "App/Calculator.cs", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when dotnet run fails")
@@ -55,7 +55,7 @@ func TestCsCheckerCheckReportMissing(t *testing.T) {
 	// dotnet succeeds but writes no report; locating it then fails.
 	proj := fakeDotnet(t, "exit 0\n")
 	c := &CsChecker{}
-	_, err := c.Check(proj, "App.Tests/CalculatorTests.cs",
+	_, err := c.Check(proj, mkMatch("App.Tests/CalculatorTests.cs"),
 		&model.Function{File: "App/Calculator.cs", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when cobertura report is missing")
@@ -78,7 +78,7 @@ exit 0
 `)
 
 	c := &CsChecker{}
-	report, err := c.Check(proj, "App.Tests/CalculatorTests.cs",
+	report, err := c.Check(proj, mkMatch("App.Tests/CalculatorTests.cs"),
 		&model.Function{File: "App/Calculator.cs", Name: "Classify", StartLine: 9, EndLine: 12})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -109,7 +109,7 @@ func TestCsCheckerCheckMkdirFails(t *testing.T) {
 	}
 
 	c := &CsChecker{}
-	_, err := c.Check(proj, "App.Tests/CalculatorTests.cs",
+	_, err := c.Check(proj, mkMatch("App.Tests/CalculatorTests.cs"),
 		&model.Function{File: "App/Calculator.cs", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when .tsma coverage dir cannot be created")
@@ -129,7 +129,7 @@ exit 0
 `)
 
 	c := &CsChecker{}
-	_, err := c.Check(proj, "App.Tests/CalculatorTests.cs",
+	_, err := c.Check(proj, mkMatch("App.Tests/CalculatorTests.cs"),
 		&model.Function{File: "App/Calculator.cs", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when cobertura xml is malformed")

@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/park-jun-woo/tsma/internal/match"
 )
 
 // Run executes a TypeScript/JavaScript test file using the detected test framework.
-func (r *TSRunner) Run(projectRoot, testFile string) (*Result, error) {
+func (r *TSRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
+	testFile := testFileFromMatch(m)
 	absTest, err := filepath.Abs(testFile)
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)

@@ -217,9 +217,10 @@ func TestRunNext_testFailOutcome(t *testing.T) {
 	os.MkdirAll(srcDir, 0o755)
 	os.WriteFile(filepath.Join(srcDir, "foo.go"),
 		[]byte("package pkg\n\nfunc Foo() int { return 1 }\n"), 0o644)
-	// A failing test triggers the outcomeTestFail branch.
+	// A failing test (referencing Foo so content-aware attributes it) triggers
+	// the outcomeTestFail branch.
 	os.WriteFile(filepath.Join(srcDir, "foo_test.go"),
-		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\tt.Fatal(\"boom\")\n}\n"), 0o644)
+		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\t_ = Foo()\n\tt.Fatal(\"boom\")\n}\n"), 0o644)
 
 	sess := &model.Session{
 		Project: dir,
@@ -522,9 +523,11 @@ func TestRunNext_misnamedTestFile(t *testing.T) {
 	os.MkdirAll(srcDir, 0o755)
 	os.WriteFile(filepath.Join(srcDir, "foo.go"),
 		[]byte("package pkg\n\nfunc Foo() int { return 1 }\n"), 0o644)
-	// Misnamed test file (Python-convention prefix mixed in), no canonical foo_test.go.
+	// Misnamed test file (Python-convention prefix) whose body does NOT reference
+	// Foo, so content-aware attribution finds nothing and the rename fallback
+	// fires (the rename hint is only a last-resort for the not-found case).
 	os.WriteFile(filepath.Join(srcDir, "test_foo_test.go"),
-		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\tif Foo() != 1 {\n\t\tt.Fatal(\"a\")\n\t}\n}\n"), 0o644)
+		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestSomethingElse(t *testing.T) {\n\t_ = 1\n}\n"), 0o644)
 
 	sess := &model.Session{
 		Project: dir,

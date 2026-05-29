@@ -3,16 +3,17 @@
 package model
 
 type Function struct {
-	QualifiedName string  `json:"qualified_name"`
-	Name          string  `json:"name"`
-	File          string  `json:"file"`
-	StartLine     int     `json:"start_line"`
-	EndLine       int     `json:"end_line"`
-	Exported      bool    `json:"exported"`
-	TestFile      string  `json:"test_file,omitempty"`
-	TestMtime     string  `json:"test_mtime,omitempty"`
-	Status        string  `json:"status"`
-	CoveragePct   float64 `json:"coverage_pct,omitempty"`
-	Attempt       int     `json:"attempt,omitempty"`
-	FailOutput    string  `json:"fail_output,omitempty"`
+	QualifiedName string   `json:"qualified_name"`
+	Name          string   `json:"name"`
+	File          string   `json:"file"`
+	StartLine     int      `json:"start_line"`
+	EndLine       int      `json:"end_line"`
+	Exported      bool     `json:"exported"`
+	TestFile      string   `json:"test_file,omitempty"`
+	TestFiles     []string `json:"test_files,omitempty"`
+	TestMtime     string   `json:"test_mtime,omitempty"`
+	Status        string   `json:"status"`
+	CoveragePct   float64  `json:"coverage_pct,omitempty"`
+	Attempt       int      `json:"attempt,omitempty"`
+	FailOutput    string   `json:"fail_output,omitempty"`
 }

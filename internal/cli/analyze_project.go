@@ -9,7 +9,6 @@ import (
 
 	"github.com/park-jun-woo/tsma/internal/detect"
 	"github.com/park-jun-woo/tsma/internal/index"
-	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
@@ -30,14 +29,10 @@ func analyzeProject(projectRoot string) (*model.Session, error) {
 	fmt.Fprintf(os.Stderr, "Found %d functions\n", len(functions))
 
 	fmt.Fprintln(os.Stderr, "Matching test files...")
-	m := match.NewMatcher(lf.Lang)
 	for i := range functions {
 		functions[i].Status = model.StatusTodo
-		testFile, found := m.Match(projectRoot, functions[i].File)
-		if found {
-			functions[i].TestFile = testFile
-		}
 	}
+	attributeTests(projectRoot, lf.Lang, functions)
 
 	sess := &model.Session{
 		Project:   projectRoot,

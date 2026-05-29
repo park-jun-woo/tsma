@@ -28,7 +28,7 @@ func TestTSRunnerRun_absError(t *testing.T) {
 	}
 
 	r := &TSRunner{}
-	if _, err := r.Run("/proj", "rel.test.ts"); err == nil {
+	if _, err := r.Run("/proj", mkMatch("rel.test.ts")); err == nil {
 		t.Fatal("expected error when filepath.Abs fails")
 	}
 }
@@ -82,7 +82,7 @@ func TestTSRunnerRun_pass(t *testing.T) {
 	installFakeNpx(t, "exit 0\n")
 
 	r := &TSRunner{}
-	res, err := r.Run(dir, "src/handler.test.ts")
+	res, err := r.Run(dir, mkMatch("src/handler.test.ts"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestTSRunnerRun_fail(t *testing.T) {
 	installFakeNpx(t, "echo failed 1>&2\nexit 1\n")
 
 	r := &TSRunner{}
-	res, err := r.Run(dir, "src/handler.test.ts")
+	res, err := r.Run(dir, mkMatch("src/handler.test.ts"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestTSRunnerRun_relProjectRootRelFallback(t *testing.T) {
 	// Relative projectRoot vs the absolute test path makes filepath.Rel fail,
 	// exercising the relTest = absTest fallback branch.
 	r := &TSRunner{}
-	res, err := r.Run("proj", "src/handler.test.ts")
+	res, err := r.Run("proj", mkMatch("src/handler.test.ts"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

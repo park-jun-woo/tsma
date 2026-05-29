@@ -4,7 +4,7 @@ import "testing"
 
 func TestBuildGoTestArgsWithFuncs(t *testing.T) {
 	args := buildGoTestArgs("./internal/handler", []string{"TestLogin", "TestSignup"})
-	expected := []string{"test", "-v", "-count=1", "-run", "TestLogin|TestSignup", "./internal/handler"}
+	expected := []string{"test", "-v", "-count=1", "-run", "^(TestLogin|TestSignup)$", "./internal/handler"}
 
 	if len(args) != len(expected) {
 		t.Fatalf("got %v (len %d), want %v (len %d)", args, len(args), expected, len(expected))
@@ -46,7 +46,7 @@ func TestBuildGoTestArgsEmptyFuncs(t *testing.T) {
 
 func TestBuildGoTestArgsSingleFunc(t *testing.T) {
 	args := buildGoTestArgs("./cmd", []string{"TestMain"})
-	expected := []string{"test", "-v", "-count=1", "-run", "TestMain", "./cmd"}
+	expected := []string{"test", "-v", "-count=1", "-run", "^TestMain$", "./cmd"}
 
 	if len(args) != len(expected) {
 		t.Fatalf("got %v (len %d), want %v (len %d)", args, len(args), expected, len(expected))

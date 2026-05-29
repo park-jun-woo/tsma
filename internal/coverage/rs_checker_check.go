@@ -7,12 +7,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
 // Check runs cargo llvm-cov for the project and maps the JSON export onto the
 // given function's line range. Requires a cargo + cargo-llvm-cov toolchain.
-func (c *RsChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
+// The match is unused: cargo llvm-cov measures the whole project regardless of
+// the matched file (behavior unchanged).
+func (c *RsChecker) Check(projectRoot string, _ match.TestMatch, fn *model.Function) (*Report, error) {
 	cargo, err := findCargo()
 	if err != nil {
 		return nil, err

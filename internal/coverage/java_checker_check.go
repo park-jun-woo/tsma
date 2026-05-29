@@ -5,13 +5,16 @@ package coverage
 import (
 	"fmt"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
 // Check runs the project's tests with JaCoCo (via Maven or Gradle) and maps the
 // resulting jacoco.xml onto the given function's line range. It branches on the
 // detected build tool and requires a working JDK + build tool + JaCoCo plugin.
-func (c *JavaChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
+// The match is unused: JaCoCo measures the whole test run regardless of the
+// matched file (behavior unchanged).
+func (c *JavaChecker) Check(projectRoot string, _ match.TestMatch, fn *model.Function) (*Report, error) {
 	buildTool := detectJavaBuildTool(projectRoot)
 	if buildTool == "" {
 		return nil, fmt.Errorf("no java build tool detected: expected pom.xml (Maven) or build.gradle(.kts) (Gradle) in %s", projectRoot)

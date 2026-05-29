@@ -5,6 +5,8 @@ package runner
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/park-jun-woo/tsma/internal/match"
 )
 
 // E2E note: running this path requires a working JDK plus Maven or Gradle,
@@ -15,7 +17,8 @@ import (
 // Run executes the given Java test file against the project. It detects the
 // build tool from project markers, locates the tool binary (preferring a
 // project wrapper), and runs only the single test class.
-func (r *JavaRunner) Run(projectRoot, testFile string) (*Result, error) {
+func (r *JavaRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
+	testFile := testFileFromMatch(m)
 	buildTool := detectJavaBuildTool(projectRoot)
 	if buildTool == "" {
 		return nil, fmt.Errorf("no java build tool detected: expected pom.xml (Maven) or build.gradle(.kts) (Gradle) in %s", projectRoot)

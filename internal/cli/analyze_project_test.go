@@ -80,7 +80,7 @@ func TestAnalyzeProject_goProject(t *testing.T) {
 	// found-test-file branch.
 	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n\nfunc Greet() string { return \"hi\" }\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "main_test.go"), []byte("package main\n\nimport \"testing\"\n\nfunc TestGreet(t *testing.T) {}\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "main_test.go"), []byte("package main\n\nimport \"testing\"\n\nfunc TestGreet(t *testing.T) { _ = Greet() }\n"), 0o644)
 
 	sess, err := analyzeProject(dir)
 	if err != nil {

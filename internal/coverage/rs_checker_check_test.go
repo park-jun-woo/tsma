@@ -33,7 +33,7 @@ func TestRsCheckerCheckWithoutCargo(t *testing.T) {
 	}
 
 	c := &RsChecker{}
-	_, err := c.Check("/tmp", "src/lib.rs", &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
+	_, err := c.Check("/tmp", mkMatch("src/lib.rs"), &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when cargo is missing")
 	}
@@ -48,7 +48,7 @@ func TestRsCheckerCheck_cargoRunFails(t *testing.T) {
 	proj := fakeCargo(t, "exit 1\n")
 
 	c := &RsChecker{}
-	_, err := c.Check(proj, "src/lib.rs", &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
+	_, err := c.Check(proj, mkMatch("src/lib.rs"), &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when cargo llvm-cov fails")
 	}
@@ -71,7 +71,7 @@ exit 0
 `)
 
 	c := &RsChecker{}
-	_, err := c.Check(proj, "src/lib.rs", &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
+	_, err := c.Check(proj, mkMatch("src/lib.rs"), &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected parse error for invalid llvm-cov json")
 	}
@@ -98,7 +98,7 @@ exit 0
 `)
 
 	c := &RsChecker{}
-	report, err := c.Check(proj, "src/lib.rs", &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
+	report, err := c.Check(proj, mkMatch("src/lib.rs"), &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestRsCheckerCheck_mkdirFails(t *testing.T) {
 	}
 
 	c := &RsChecker{}
-	_, err := c.Check(proj, "src/lib.rs", &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
+	_, err := c.Check(proj, mkMatch("src/lib.rs"), &model.Function{File: "src/lib.rs", StartLine: 1, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when .tsma dir cannot be created")
 	}

@@ -15,7 +15,7 @@ func TestUnsupportedCheckerCheck(t *testing.T) {
 		EndLine:   10,
 	}
 
-	report, err := checker.Check("/project", "test_test.rb", fn)
+	report, err := checker.Check("/project", mkMatch("test_test.rb"), fn)
 	if report != nil {
 		t.Error("expected nil report from UnsupportedChecker")
 	}
@@ -34,7 +34,7 @@ func TestUnsupportedCheckerCheck(t *testing.T) {
 
 func TestUnsupportedCheckerCheckEmptyLang(t *testing.T) {
 	checker := &UnsupportedChecker{Lang: ""}
-	_, err := checker.Check("", "", &model.Function{})
+	_, err := checker.Check("", mkMatch(""), &model.Function{})
 	if err == nil {
 		t.Fatal("expected error from UnsupportedChecker even with empty lang")
 	}

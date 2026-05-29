@@ -104,7 +104,7 @@ func TestNewCheckerUnsupported(t *testing.T) {
 		t.Errorf("UnsupportedChecker.Lang = %q, want %q", u.Lang, "kotlin")
 	}
 
-	_, err := c.Check("/tmp", "MainTest.kt", &model.Function{})
+	_, err := c.Check("/tmp", mkMatch("MainTest.kt"), &model.Function{})
 	if err == nil {
 		t.Fatal("UnsupportedChecker.Check should return an error")
 	}

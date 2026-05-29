@@ -43,7 +43,7 @@ func TestNewRunnerUnsupported(t *testing.T) {
 		t.Errorf("UnsupportedRunner.Lang = %q, want %q", u.Lang, "kotlin")
 	}
 
-	_, err := r.Run("/tmp", "MainTest.kt")
+	_, err := r.Run("/tmp", mkMatch("MainTest.kt"))
 	if err == nil {
 		t.Fatal("UnsupportedRunner.Run should return an error")
 	}

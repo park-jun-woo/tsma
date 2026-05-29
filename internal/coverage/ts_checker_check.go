@@ -8,11 +8,13 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
 // Check runs the test with coverage and parses the istanbul/v8 coverage report.
-func (c *TSChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
+func (c *TSChecker) Check(projectRoot string, m match.TestMatch, fn *model.Function) (*Report, error) {
+	testFile := testFileFromMatch(m)
 	absTest, err := filepath.Abs(testFile)
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)

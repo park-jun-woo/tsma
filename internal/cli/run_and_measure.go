@@ -1,19 +1,22 @@
 //ff:func feature=cli type=helper control=sequence
-//ff:what Runs tests and measures coverage returning a structured result
+//ff:what Runs the matched tests, then measures coverage if they pass, returning a structured result
 package cli
 
 import (
 	"github.com/park-jun-woo/tsma/internal/coverage"
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 	"github.com/park-jun-woo/tsma/internal/runner"
 )
 
-// runAndMeasure executes the test, then measures coverage if tests pass.
-func runAndMeasure(root, lang string, fn *model.Function, testFile string) measureResult {
+// runAndMeasure executes the matched tests, then measures coverage if they pass.
+// The mtime recorded is the combined (max) mtime across all matched test files,
+// matching detectTestChange's change signature.
+func runAndMeasure(root, lang string, fn *model.Function, tm match.TestMatch) measureResult {
 	r := runner.NewRunner(lang)
-	mtime := getTestMtime(root, testFile)
+	mtime := combinedTestMtime(root, tm.Files)
 
-	res, err := r.Run(root, testFile)
+	res, err := r.Run(root, tm)
 	if err != nil || !res.Pass {
 		output := ""
 		if err != nil {
@@ -25,7 +28,7 @@ func runAndMeasure(root, lang string, fn *model.Function, testFile string) measu
 	}
 
 	checker := coverage.NewChecker(lang)
-	report, err := checker.Check(root, testFile, fn)
+	report, err := checker.Check(root, tm, fn)
 	if err != nil {
 		return measureResult{outcome: outcomeTestFail, mtime: mtime, failOutput: err.Error()}
 	}

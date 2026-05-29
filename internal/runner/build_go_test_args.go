@@ -2,13 +2,13 @@
 //ff:what Constructs command-line arguments for go test
 package runner
 
-import "strings"
-
-// buildGoTestArgs constructs command-line arguments for go test.
+// buildGoTestArgs constructs command-line arguments for go test. When test
+// functions are given, the -run pattern is anchored per name (^Name$) and
+// alternated so that e.g. TestGenerate does not also match TestGenerateBytes.
 func buildGoTestArgs(pkgPath string, testFuncs []string) []string {
 	args := []string{"test", "-v", "-count=1"}
-	if len(testFuncs) > 0 {
-		args = append(args, "-run", strings.Join(testFuncs, "|"))
+	if pattern := AnchorRunPattern(testFuncs); pattern != "" {
+		args = append(args, "-run", pattern)
 	}
 	args = append(args, pkgPath)
 	return args

@@ -11,7 +11,7 @@ import (
 
 func TestGoCheckerCheck_InvalidProject(t *testing.T) {
 	checker := &GoChecker{}
-	_, err := checker.Check("/nonexistent", "fake_test.go", nil)
+	_, err := checker.Check("/nonexistent", mkMatch("fake_test.go"), nil)
 	if err == nil {
 		t.Error("expected error for nonexistent project")
 	}
@@ -22,7 +22,7 @@ func TestGoCheckerCheck_InvalidProject(t *testing.T) {
 // the two cannot be made relative to each other.
 func TestGoCheckerCheck_relError(t *testing.T) {
 	checker := &GoChecker{}
-	_, err := checker.Check("relative-root-not-abs", "fake_test.go", nil)
+	_, err := checker.Check("relative-root-not-abs", mkMatch("fake_test.go"), nil)
 	if err == nil {
 		t.Fatal("expected error when projectRoot is relative")
 	}
@@ -54,7 +54,7 @@ func TestGoCheckerCheck_absError(t *testing.T) {
 
 	checker := &GoChecker{}
 	// Relative testFile so filepath.Abs must consult the (now-missing) cwd.
-	if _, err := checker.Check("/proj", "fake_test.go", nil); err == nil {
+	if _, err := checker.Check("/proj", mkMatch("fake_test.go"), nil); err == nil {
 		t.Fatal("expected error when filepath.Abs fails")
 	}
 }
@@ -89,7 +89,7 @@ func TestGoCheckerCheck_success(t *testing.T) {
 
 	checker := &GoChecker{}
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8}
-	report, err := checker.Check(dir, testRel, fn)
+	report, err := checker.Check(dir, mkMatch(testRel), fn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestGoCheckerCheck_testFails(t *testing.T) {
 
 	checker := &GoChecker{}
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3}
-	_, err := checker.Check(dir, filepath.Join("pkg", "foo_test.go"), fn)
+	_, err := checker.Check(dir, mkMatch(filepath.Join("pkg", "foo_test.go")), fn)
 	if err == nil {
 		t.Fatal("expected error when go test fails")
 	}
@@ -156,7 +156,7 @@ exit 0
 
 	checker := &GoChecker{}
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3}
-	_, err := checker.Check(dir, filepath.Join(dir, "pkg", "foo_test.go"), fn)
+	_, err := checker.Check(dir, mkMatch(filepath.Join(dir, "pkg", "foo_test.go")), fn)
 	if err == nil {
 		t.Fatal("expected error when coverage profile is unparseable")
 	}
@@ -179,7 +179,7 @@ func TestGoCheckerCheck_partialCoverage(t *testing.T) {
 
 	checker := &GoChecker{}
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8}
-	report, err := checker.Check(dir, filepath.Join("pkg", "foo_test.go"), fn)
+	report, err := checker.Check(dir, mkMatch(filepath.Join("pkg", "foo_test.go")), fn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

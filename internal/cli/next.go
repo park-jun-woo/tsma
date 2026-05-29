@@ -40,8 +40,13 @@ func runNext(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	changed, testFile := detectTestChange(root, sess.Lang, fn)
-	if testFile == "" {
+	changed, tm := detectTestChange(root, sess.Lang, fn)
+	testFile := representativeTestFile(tm)
+	if len(tm.Files) == 0 {
+		// Content-aware (and file-name fallback) found no test for this
+		// function. Only then do we suggest a rename: with content-aware
+		// attribution a mismatched file name is no longer the primary problem,
+		// so the rename hint is a last-resort fallback for the not-found case.
 		printTodoFunction(fn, "")
 		if misnamed, canonical, found := match.FindMisnamedTest(root, sess.Lang, fn.File); found {
 			printRenameInstruction(misnamed, canonical)
@@ -63,11 +68,11 @@ func runNext(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	result := runAndMeasure(root, sess.Lang, fn, testFile)
+	result := runAndMeasure(root, sess.Lang, fn, tm)
 
 	switch result.outcome {
 	case outcomeTestFail:
-		fn.TestFile = testFile
+		setTestFiles(fn, tm)
 		fn.TestMtime = result.mtime
 		fn.FailOutput = result.failOutput
 		fmt.Fprintf(os.Stderr, "FAIL  %s\n", fn.Name)
@@ -77,7 +82,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 
 	case outcomePass:
 		fn.Status = model.StatusPass
-		fn.TestFile = testFile
+		setTestFiles(fn, tm)
 		fn.TestMtime = result.mtime
 		fn.CoveragePct = 100
 		fn.FailOutput = ""
@@ -94,7 +99,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 
 	case outcomeDone:
 		fn.Status = model.StatusDone
-		fn.TestFile = testFile
+		setTestFiles(fn, tm)
 		fn.TestMtime = result.mtime
 		fn.CoveragePct = result.coveragePct
 		fn.FailOutput = ""
@@ -110,7 +115,7 @@ func runNext(cmd *cobra.Command, args []string) error {
 		}
 
 	case outcomeRetry:
-		fn.TestFile = testFile
+		setTestFiles(fn, tm)
 		fn.TestMtime = result.mtime
 		fn.Attempt = result.attempt
 		fn.CoveragePct = result.coveragePct

@@ -7,7 +7,7 @@ import (
 
 func TestUnsupportedRunnerRunReturnsError(t *testing.T) {
 	r := &UnsupportedRunner{Lang: "rust"}
-	result, err := r.Run("/tmp", "main_test.rs")
+	result, err := r.Run("/tmp", mkMatch("main_test.rs"))
 	if err == nil {
 		t.Fatal("expected error from UnsupportedRunner.Run")
 	}
@@ -21,7 +21,7 @@ func TestUnsupportedRunnerRunReturnsError(t *testing.T) {
 
 func TestUnsupportedRunnerRunDifferentLang(t *testing.T) {
 	r := &UnsupportedRunner{Lang: "ruby"}
-	_, err := r.Run("/tmp", "test.rb")
+	_, err := r.Run("/tmp", mkMatch("test.rb"))
 	if err == nil {
 		t.Fatal("expected error")
 	}

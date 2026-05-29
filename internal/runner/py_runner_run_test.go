@@ -51,7 +51,7 @@ func TestPyRunnerRun_pytestBranchPass(t *testing.T) {
 	fakePython(t, "exit 0\n")
 
 	r := &PyRunner{}
-	res, err := r.Run(dir, "test_x.py")
+	res, err := r.Run(dir, mkMatch("test_x.py"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestPyRunnerRun_unittestBranchFail(t *testing.T) {
 	fakePython(t, "exit 1\n")
 
 	r := &PyRunner{}
-	res, err := r.Run(dir, "test_x.py")
+	res, err := r.Run(dir, mkMatch("test_x.py"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

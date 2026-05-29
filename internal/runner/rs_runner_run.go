@@ -2,14 +2,19 @@
 //ff:what Executes Rust tests for the given test file using cargo test
 package runner
 
-import "os/exec"
+import (
+	"os/exec"
+
+	"github.com/park-jun-woo/tsma/internal/match"
+)
 
 // E2E note: running this path requires a working `cargo` toolchain, which is
 // not available in CI/sandbox environments. The argument builder is split out
 // (buildCargoTestArgs) for environment-independent unit testing.
 
 // Run executes the given Rust test file against the project using cargo test.
-func (r *RsRunner) Run(projectRoot, testFile string) (*Result, error) {
+func (r *RsRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
+	testFile := testFileFromMatch(m)
 	cargo, err := findCargo()
 	if err != nil {
 		return nil, err

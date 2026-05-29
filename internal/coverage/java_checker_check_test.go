@@ -39,7 +39,7 @@ func TestJavaCheckerCheckToolNotFound(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
 	c := &JavaChecker{}
-	_, err := c.Check(proj, "src/test/java/com/example/CalculatorTest.java",
+	_, err := c.Check(proj, mkMatch("src/test/java/com/example/CalculatorTest.java"),
 		&model.Function{File: "src/main/java/com/example/Calculator.java", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when mvn is not found on PATH")
@@ -51,7 +51,7 @@ func TestJavaCheckerCheckToolNotFound(t *testing.T) {
 
 func TestJavaCheckerCheckNoBuildTool(t *testing.T) {
 	c := &JavaChecker{}
-	_, err := c.Check(t.TempDir(), "src/test/java/p/FooTest.java",
+	_, err := c.Check(t.TempDir(), mkMatch("src/test/java/p/FooTest.java"),
 		&model.Function{File: "src/main/java/p/Foo.java", StartLine: 1, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when no build tool marker present")
@@ -64,7 +64,7 @@ func TestJavaCheckerCheckNoBuildTool(t *testing.T) {
 func TestJavaCheckerCheckRunFails(t *testing.T) {
 	proj := fakeMaven(t, "exit 1\n")
 	c := &JavaChecker{}
-	_, err := c.Check(proj, "src/test/java/com/example/CalculatorTest.java",
+	_, err := c.Check(proj, mkMatch("src/test/java/com/example/CalculatorTest.java"),
 		&model.Function{File: "src/main/java/com/example/Calculator.java", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected error when build tool run fails")
@@ -78,7 +78,7 @@ func TestJavaCheckerCheckParseFails(t *testing.T) {
 	// mvn succeeds but writes no report; parseJacoco then fails to read it.
 	proj := fakeMaven(t, "exit 0\n")
 	c := &JavaChecker{}
-	_, err := c.Check(proj, "src/test/java/com/example/CalculatorTest.java",
+	_, err := c.Check(proj, mkMatch("src/test/java/com/example/CalculatorTest.java"),
 		&model.Function{File: "src/main/java/com/example/Calculator.java", StartLine: 5, EndLine: 5})
 	if err == nil {
 		t.Fatal("expected parse error when report is missing")
@@ -101,7 +101,7 @@ exit 0
 `)
 
 	c := &JavaChecker{}
-	report, err := c.Check(proj, "src/test/java/com/example/CalculatorTest.java",
+	report, err := c.Check(proj, mkMatch("src/test/java/com/example/CalculatorTest.java"),
 		&model.Function{File: "src/main/java/com/example/Calculator.java", Name: "classify", StartLine: 9, EndLine: 12})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

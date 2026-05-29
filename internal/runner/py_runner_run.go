@@ -6,10 +6,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/park-jun-woo/tsma/internal/match"
 )
 
 // Run executes the given Python test file against the project.
-func (r *PyRunner) Run(projectRoot, testFile string) (*Result, error) {
+func (r *PyRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
+	testFile := testFileFromMatch(m)
 	absTest := filepath.Join(projectRoot, testFile)
 
 	usePytest := detectPytest(projectRoot)

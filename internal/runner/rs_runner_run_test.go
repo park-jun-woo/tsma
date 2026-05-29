@@ -26,7 +26,7 @@ func TestRsRunnerRunWithoutCargo(t *testing.T) {
 	}
 
 	r := &RsRunner{}
-	_, err := r.Run("/tmp", "tests/api.rs")
+	_, err := r.Run("/tmp", mkMatch("tests/api.rs"))
 	if err == nil {
 		t.Fatal("expected error when cargo is missing")
 	}
@@ -38,7 +38,7 @@ func TestRsRunnerRunWithoutCargo(t *testing.T) {
 func TestRsRunnerRun_pass(t *testing.T) {
 	installFakeCargo(t, "exit 0\n")
 	r := &RsRunner{}
-	res, err := r.Run(t.TempDir(), "tests/api.rs")
+	res, err := r.Run(t.TempDir(), mkMatch("tests/api.rs"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestRsRunnerRun_pass(t *testing.T) {
 func TestRsRunnerRun_fail(t *testing.T) {
 	installFakeCargo(t, "echo failures 1>&2\nexit 101\n")
 	r := &RsRunner{}
-	res, err := r.Run(t.TempDir(), "tests/api.rs")
+	res, err := r.Run(t.TempDir(), mkMatch("tests/api.rs"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

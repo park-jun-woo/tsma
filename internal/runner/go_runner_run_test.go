@@ -9,7 +9,7 @@ import (
 
 func TestGoRunnerRunNonexistentTestFile(t *testing.T) {
 	r := &GoRunner{}
-	_, err := r.Run("/tmp", "/nonexistent/path/handler_test.go")
+	_, err := r.Run("/tmp", mkMatch("/nonexistent/path/handler_test.go"))
 	if err == nil {
 		t.Fatal("expected error for nonexistent test file")
 	}
@@ -36,7 +36,7 @@ func TestGoRunnerRun_absError(t *testing.T) {
 	}
 
 	r := &GoRunner{}
-	if _, err := r.Run("/proj", "rel_test.go"); err == nil {
+	if _, err := r.Run("/proj", mkMatch("rel_test.go")); err == nil {
 		t.Fatal("expected error when filepath.Abs fails")
 	}
 }
@@ -46,7 +46,7 @@ func TestGoRunnerRun_absError(t *testing.T) {
 // path.
 func TestGoRunnerRun_pkgPathError(t *testing.T) {
 	r := &GoRunner{}
-	_, err := r.Run("relative-root", "some_test.go")
+	_, err := r.Run("relative-root", mkMatch("some_test.go"))
 	if err == nil {
 		t.Fatal("expected error when projectRoot is relative")
 	}
@@ -67,7 +67,7 @@ func TestGoRunnerRun_passing(t *testing.T) {
 	os.Chdir(dir)
 
 	r := &GoRunner{}
-	res, err := r.Run(dir, "foo_test.go")
+	res, err := r.Run(dir, mkMatch("foo_test.go"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestGoRunnerRun_failing(t *testing.T) {
 	os.Chdir(dir)
 
 	r := &GoRunner{}
-	res, err := r.Run(dir, "foo_test.go")
+	res, err := r.Run(dir, mkMatch("foo_test.go"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestHello(t *testing.T) {}
 	if args[3] != "-run" {
 		t.Errorf("args[3] = %q, want \"-run\"", args[3])
 	}
-	if args[4] != "TestHello" {
-		t.Errorf("args[4] = %q, want \"TestHello\"", args[4])
+	if args[4] != "^TestHello$" {
+		t.Errorf("args[4] = %q, want \"^TestHello$\"", args[4])
 	}
 }

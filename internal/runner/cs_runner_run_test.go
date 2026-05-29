@@ -26,7 +26,7 @@ func TestCsRunnerRunWithoutDotnet(t *testing.T) {
 	}
 
 	r := &CsRunner{}
-	_, err := r.Run("/tmp", "App.Tests/FooTests.cs")
+	_, err := r.Run("/tmp", mkMatch("App.Tests/FooTests.cs"))
 	if err == nil {
 		t.Fatal("expected error when dotnet is missing")
 	}
@@ -38,7 +38,7 @@ func TestCsRunnerRunWithoutDotnet(t *testing.T) {
 func TestCsRunnerRunPass(t *testing.T) {
 	installFakeDotnet(t, "exit 0\n")
 	r := &CsRunner{}
-	res, err := r.Run(t.TempDir(), "App.Tests/FooTests.cs")
+	res, err := r.Run(t.TempDir(), mkMatch("App.Tests/FooTests.cs"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestCsRunnerRunPass(t *testing.T) {
 func TestCsRunnerRunFail(t *testing.T) {
 	installFakeDotnet(t, "echo Failed! 1>&2\nexit 1\n")
 	r := &CsRunner{}
-	res, err := r.Run(t.TempDir(), "App.Tests/FooTests.cs")
+	res, err := r.Run(t.TempDir(), mkMatch("App.Tests/FooTests.cs"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

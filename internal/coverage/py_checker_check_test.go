@@ -10,7 +10,7 @@ import (
 
 func TestPyCheckerCheck_InvalidProject(t *testing.T) {
 	checker := &PyChecker{}
-	_, err := checker.Check("/nonexistent", "fake_test.py", nil)
+	_, err := checker.Check("/nonexistent", mkMatch("fake_test.py"), nil)
 	if err == nil {
 		t.Error("expected error for nonexistent project")
 	}
@@ -37,7 +37,7 @@ func TestPyCheckerCheck_absError(t *testing.T) {
 	}
 
 	checker := &PyChecker{}
-	if _, err := checker.Check("/proj", "rel_test.py", nil); err == nil {
+	if _, err := checker.Check("/proj", mkMatch("rel_test.py"), nil); err == nil {
 		t.Fatal("expected error when filepath.Abs fails")
 	}
 }
@@ -76,7 +76,7 @@ exit 0
 
 	checker := &PyChecker{}
 	fn := &model.Function{Name: "foo", File: "mod.py", StartLine: 1, EndLine: 4}
-	report, err := checker.Check(proj, "mod_test.py", fn)
+	report, err := checker.Check(proj, mkMatch("mod_test.py"), fn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestPyCheckerCheck_parseFails(t *testing.T) {
 
 	checker := &PyChecker{}
 	fn := &model.Function{Name: "x", File: "mod_test.py", StartLine: 1, EndLine: 2}
-	_, err := checker.Check(proj, "mod_test.py", fn)
+	_, err := checker.Check(proj, mkMatch("mod_test.py"), fn)
 	if err == nil {
 		t.Fatal("expected parse error when coverage.json missing")
 	}
@@ -120,7 +120,7 @@ func TestPyCheckerCheck_mkdirError(t *testing.T) {
 
 	checker := &PyChecker{}
 	fn := &model.Function{Name: "foo", File: "mod.py", StartLine: 1, EndLine: 3}
-	_, err := checker.Check(dir, "mod.py", fn)
+	_, err := checker.Check(dir, mkMatch("mod.py"), fn)
 	if err == nil {
 		t.Fatal("expected error when .tsma directory cannot be created")
 	}
@@ -139,7 +139,7 @@ func TestPyCheckerCheck_coverageFails(t *testing.T) {
 
 	checker := &PyChecker{}
 	fn := &model.Function{Name: "x", File: "broken_test.py", StartLine: 1, EndLine: 4}
-	_, err := checker.Check(dir, "broken_test.py", fn)
+	_, err := checker.Check(dir, mkMatch("broken_test.py"), fn)
 	if err == nil {
 		t.Fatal("expected error when python coverage cannot run")
 	}

@@ -29,7 +29,7 @@ func mavenProject(t *testing.T) string {
 
 func TestJavaRunnerRunNoBuildTool(t *testing.T) {
 	r := &JavaRunner{}
-	_, err := r.Run(t.TempDir(), "src/test/java/p/FooTest.java")
+	_, err := r.Run(t.TempDir(), mkMatch("src/test/java/p/FooTest.java"))
 	if err == nil {
 		t.Fatal("expected error when no build tool marker is present")
 	}
@@ -43,7 +43,7 @@ func TestJavaRunnerRunPass(t *testing.T) {
 	installFakeJavaTool(t, "mvn", "exit 0\n")
 
 	r := &JavaRunner{}
-	res, err := r.Run(dir, "src/test/java/p/FooTest.java")
+	res, err := r.Run(dir, mkMatch("src/test/java/p/FooTest.java"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestJavaRunnerRunFail(t *testing.T) {
 	installFakeJavaTool(t, "mvn", "echo BUILD FAILURE 1>&2\nexit 1\n")
 
 	r := &JavaRunner{}
-	res, err := r.Run(dir, "src/test/java/p/FooTest.java")
+	res, err := r.Run(dir, mkMatch("src/test/java/p/FooTest.java"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestJavaRunnerRunToolNotFound(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
 	r := &JavaRunner{}
-	_, err := r.Run(dir, "src/test/java/p/FooTest.java")
+	_, err := r.Run(dir, mkMatch("src/test/java/p/FooTest.java"))
 	if err == nil {
 		t.Fatal("expected error when mvn is not found on PATH")
 	}

@@ -7,14 +7,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
 // Check runs the project's tests with the coverlet XPlat collector (via
 // `dotnet test`), collects the Cobertura report under .tsma/coverage, and maps
 // it onto the given function's line range. A working .NET SDK plus the
-// coverlet.collector package is required.
-func (c *CsChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
+// coverlet.collector package is required. The match is unused: dotnet test
+// measures the whole run regardless of the matched file (behavior unchanged).
+func (c *CsChecker) Check(projectRoot string, _ match.TestMatch, fn *model.Function) (*Report, error) {
 	dotnet, err := findDotnet()
 	if err != nil {
 		return nil, err

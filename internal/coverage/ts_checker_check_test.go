@@ -10,7 +10,7 @@ import (
 
 func TestTSCheckerCheck_InvalidProject(t *testing.T) {
 	checker := &TSChecker{}
-	_, err := checker.Check("/nonexistent", "fake_test.ts", nil)
+	_, err := checker.Check("/nonexistent", mkMatch("fake_test.ts"), nil)
 	if err == nil {
 		t.Error("expected error for nonexistent project")
 	}
@@ -37,7 +37,7 @@ func TestTSCheckerCheck_absError(t *testing.T) {
 	}
 
 	checker := &TSChecker{}
-	if _, err := checker.Check("/proj", "rel.test.ts", nil); err == nil {
+	if _, err := checker.Check("/proj", mkMatch("rel.test.ts"), nil); err == nil {
 		t.Fatal("expected error when filepath.Abs fails")
 	}
 }
@@ -66,7 +66,7 @@ func TestTSCheckerCheck_relFallback(t *testing.T) {
 	checker := &TSChecker{}
 	fn := &model.Function{Name: "App", File: "src/app.ts", StartLine: 1, EndLine: 10}
 	// Relative projectRoot triggers the Rel-error fallback at line 22.
-	_, err := checker.Check("relroot", "src/app.test.ts", fn)
+	_, err := checker.Check("relroot", mkMatch("src/app.test.ts"), fn)
 	if err == nil {
 		t.Fatal("expected error (npx exits non-zero) after rel fallback")
 	}
@@ -105,7 +105,7 @@ exit 0
 
 	checker := &TSChecker{}
 	fn := &model.Function{Name: "App", File: "src/app.ts", StartLine: 1, EndLine: 10}
-	report, err := checker.Check(proj, "src/app.test.ts", fn)
+	report, err := checker.Check(proj, mkMatch("src/app.test.ts"), fn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestTSCheckerCheck_npxFails(t *testing.T) {
 
 	checker := &TSChecker{}
 	fn := &model.Function{Name: "App", File: "src/app.ts", StartLine: 1, EndLine: 10}
-	_, err := checker.Check(proj, "src/app.test.ts", fn)
+	_, err := checker.Check(proj, mkMatch("src/app.test.ts"), fn)
 	if err == nil {
 		t.Fatal("expected error when npx coverage fails")
 	}
@@ -131,7 +131,7 @@ func TestTSCheckerCheck_parseFails(t *testing.T) {
 
 	checker := &TSChecker{}
 	fn := &model.Function{Name: "App", File: "src/app.ts", StartLine: 1, EndLine: 10}
-	_, err := checker.Check(proj, "src/app.test.ts", fn)
+	_, err := checker.Check(proj, mkMatch("src/app.test.ts"), fn)
 	if err == nil {
 		t.Fatal("expected parse error when coverage report is missing")
 	}
@@ -146,7 +146,7 @@ func TestTSCheckerCheck_mkdirFails(t *testing.T) {
 
 	checker := &TSChecker{}
 	fn := &model.Function{Name: "App", File: "src/app.ts", StartLine: 1, EndLine: 10}
-	_, err := checker.Check(proj, "src/app.test.ts", fn)
+	_, err := checker.Check(proj, mkMatch("src/app.test.ts"), fn)
 	if err == nil {
 		t.Fatal("expected error when coverage dir cannot be created")
 	}

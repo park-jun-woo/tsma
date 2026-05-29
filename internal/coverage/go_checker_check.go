@@ -1,5 +1,5 @@
 //ff:func feature=coverage type=implementation control=sequence
-//ff:what Runs go test with coverprofile filtered by test file functions and computes per-function coverage
+//ff:what Runs go test with coverprofile filtered by the match's anchored test funcs and computes per-function coverage
 package coverage
 
 import (
@@ -7,15 +7,22 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 	"github.com/park-jun-woo/tsma/internal/runner"
 )
 
-// Check runs go test with coverage and parses the profile.
-func (c *GoChecker) Check(projectRoot, testFile string, fn *model.Function) (*Report, error) {
-	absTest, err := filepath.Abs(testFile)
+// Check runs go test with coverage and parses the profile. The package path is
+// derived from the match's files (assumed same package) and the -run filter is
+// the anchored union of the match's test functions, so only the attributed
+// tests run.
+func (c *GoChecker) Check(projectRoot string, m match.TestMatch, fn *model.Function) (*Report, error) {
+	if len(m.Files) == 0 {
+		return nil, fmt.Errorf("no test files in match")
+	}
+
+	absTest, err := filepath.Abs(m.Files[0])
 	if err != nil {
 		return nil, fmt.Errorf("resolve test path: %w", err)
 	}
@@ -35,9 +42,11 @@ func (c *GoChecker) Check(projectRoot, testFile string, fn *model.Function) (*Re
 		"-covermode=set",
 	}
 
-	testFuncs, err := runner.ExtractTestFuncs(absTest)
-	if err == nil && len(testFuncs) > 0 {
-		args = append(args, "-run", strings.Join(testFuncs, "|"))
+	testFuncs, err := runner.ResolveTestFuncs(m)
+	if err == nil {
+		if pattern := runner.AnchorRunPattern(testFuncs); pattern != "" {
+			args = append(args, "-run", pattern)
+		}
 	}
 
 	args = append(args, pkgPath)
