@@ -8,7 +8,9 @@ import (
 )
 
 // TestAttributeTests_goDispatch verifies attributeTests routes Go projects
-// through the content-aware Go matcher, attributing only referenced functions.
+// through the hybrid Go matcher: Used is matched content-aware, and Unused —
+// unreferenced but covered by the conventional lib_test.go on disk — is matched
+// via the file-name fallback.
 func TestAttributeTests_goDispatch(t *testing.T) {
 	root := goFixture(t)
 	fns := []model.Function{
@@ -21,8 +23,8 @@ func TestAttributeTests_goDispatch(t *testing.T) {
 	if len(fns[0].TestFiles) != 1 || filepath.Base(fns[0].TestFiles[0]) != "lib_test.go" {
 		t.Errorf("Used TestFiles = %v, want [lib_test.go]", fns[0].TestFiles)
 	}
-	if len(fns[1].TestFiles) != 0 {
-		t.Errorf("Unused should not be attributed, got %v", fns[1].TestFiles)
+	if len(fns[1].TestFiles) != 1 || filepath.Base(fns[1].TestFiles[0]) != "lib_test.go" {
+		t.Errorf("Unused should fall back to lib_test.go, got %v", fns[1].TestFiles)
 	}
 }
 

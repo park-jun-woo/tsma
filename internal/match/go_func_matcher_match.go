@@ -10,11 +10,15 @@ import (
 
 // MatchFunc builds the content-aware test index for the function's package once
 // and looks the function up by its bare name. It returns the deduplicated set of
-// test files and test functions that reference the function. When no test in the
-// package references it (or the package cannot be indexed), it returns found
-// false. It deliberately does not fall back to file-name matching: pure
-// content-aware attribution is the contract here, and any fallback is handled by
-// the caller in a later phase.
+// test files and test functions that reference the function (content-aware
+// precision: 1:N multi-file attribution is preserved). When content-aware
+// matching finds nothing — the package cannot be indexed, no test references the
+// function, or the refs resolve to no files — it falls back to file-name
+// matching via goFilenameFallback, attributing the conventional <base>_test.go
+// when it exists on disk. This hybrid keeps indirect/dispatch-style tests from
+// producing false TODOs while never overriding a content-aware match. It mirrors
+// the batch MatchFuncs path so detectTestChange (single-func) and analyze
+// (batch) re-match identically.
 func (m *GoFuncMatcher) MatchFunc(projectRoot string, fn *model.Function) (TestMatch, bool) {
 	if fn == nil {
 		return TestMatch{}, false
@@ -22,11 +26,14 @@ func (m *GoFuncMatcher) MatchFunc(projectRoot string, fn *model.Function) (TestM
 	pkgDir := filepath.Dir(fn.File)
 	idx, err := BuildPkgTestIndex(projectRoot, pkgDir)
 	if err != nil {
-		return TestMatch{}, false
+		return goFilenameFallback(projectRoot, fn)
 	}
 	refs, ok := MatchFuncByName(idx, fn)
 	if !ok {
-		return TestMatch{}, false
+		return goFilenameFallback(projectRoot, fn)
 	}
-	return refsToTestMatch(refs)
+	if tm, ok := refsToTestMatch(refs); ok {
+		return tm, true
+	}
+	return goFilenameFallback(projectRoot, fn)
 }

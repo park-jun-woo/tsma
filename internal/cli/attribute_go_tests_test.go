@@ -29,8 +29,10 @@ func goFixture(t *testing.T) string {
 }
 
 // TestAttributeGoTests_contentAware verifies attributeGoTests fills TestFiles
-// for functions that a test references in its body, and leaves unreferenced
-// functions untouched.
+// for functions that a test references in its body via content-aware matching.
+// Because the conventional lib_test.go exists on disk, the unreferenced Unused
+// is now attributed to it via the hybrid file-name fallback (content-aware
+// precision for Used, fallback safety net for Unused).
 func TestAttributeGoTests_contentAware(t *testing.T) {
 	root := goFixture(t)
 	fns := []model.Function{
@@ -46,8 +48,11 @@ func TestAttributeGoTests_contentAware(t *testing.T) {
 	if fns[0].TestFile != fns[0].TestFiles[0] {
 		t.Errorf("Used TestFile = %q, want %q", fns[0].TestFile, fns[0].TestFiles[0])
 	}
-	if len(fns[1].TestFiles) != 0 || fns[1].TestFile != "" {
-		t.Errorf("Unused should not be attributed: TestFiles=%v TestFile=%q", fns[1].TestFiles, fns[1].TestFile)
+	if len(fns[1].TestFiles) != 1 || filepath.Base(fns[1].TestFiles[0]) != "lib_test.go" {
+		t.Errorf("Unused should fall back to lib_test.go: TestFiles=%v", fns[1].TestFiles)
+	}
+	if fns[1].TestFile != fns[1].TestFiles[0] {
+		t.Errorf("Unused TestFile = %q, want %q", fns[1].TestFile, fns[1].TestFiles[0])
 	}
 }
 

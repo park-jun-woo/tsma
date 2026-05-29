@@ -12,10 +12,17 @@ import (
 // Go index, building the index for each package directory exactly once and
 // reusing it for all functions in that directory. This avoids the O(funcs ×
 // files) re-parsing that calling MatchFunc per function would cause. For each
-// matched function it returns its deduplicated TestMatch keyed by the function's
-// index in fns; unmatched functions are absent from the result map. Only Go
-// functions are content-aware here; callers handle other languages via the
-// per-function fallback FuncMatcher.
+// function it first tries content-aware attribution (preserving precise 1:N
+// multi-file matches); functions that content-aware does not match fall back to
+// file-name matching via goFilenameFallback, which attributes the conventional
+// <base>_test.go when it exists on disk. content-aware always wins: fallback is
+// applied only to otherwise-unmatched functions and never overwrites a
+// content-aware result. The result is keyed by the function's index in fns;
+// functions with neither a content-aware match nor a conventional test file are
+// absent from the map. This hybrid mirrors GoFuncMatcher.MatchFunc so analyze
+// (batch) and detectTestChange (single) re-match identically. Only Go functions
+// are content-aware here; callers handle other languages via the per-function
+// fallback FuncMatcher.
 func MatchFuncs(projectRoot string, fns []model.Function) map[int]TestMatch {
 	out := make(map[int]TestMatch)
 
@@ -28,20 +35,13 @@ func MatchFuncs(projectRoot string, fns []model.Function) map[int]TestMatch {
 	}
 
 	for dir, idxs := range byDir {
-		idx, err := BuildPkgTestIndex(projectRoot, dir)
-		if err != nil {
-			continue
-		}
+		// idx may be nil when the package cannot be indexed; attributeFunc then
+		// relies solely on the file-name fallback.
+		idx, _ := BuildPkgTestIndex(projectRoot, dir)
 		for _, i := range idxs {
-			refs, ok := MatchFuncByName(idx, &fns[i])
-			if !ok {
-				continue
+			if tm, ok := attributeFunc(projectRoot, idx, &fns[i]); ok {
+				out[i] = tm
 			}
-			tm, ok := refsToTestMatch(refs)
-			if !ok {
-				continue
-			}
-			out[i] = tm
 		}
 	}
 	return out

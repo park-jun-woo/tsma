@@ -56,14 +56,16 @@ func TestMatchFuncs_perPackageSeparation(t *testing.T) {
 	}
 }
 
-// TestMatchFuncs_unmatchedAbsent verifies functions with no referencing test
-// are absent from the result map.
+// TestMatchFuncs_unmatchedAbsent verifies functions with neither a referencing
+// test nor a conventional <base>_test.go on disk are absent from the result map.
+// The test file here is named scenario_test.go (not the conventional
+// lib_test.go), so the file-name fallback cannot fire for Unused.
 func TestMatchFuncs_unmatchedAbsent(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/m\n\ngo 1.22\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "lib.go"),
 		[]byte("package lib\n\nfunc Used() int { return 1 }\n\nfunc Unused() int { return 2 }\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "lib_test.go"),
+	os.WriteFile(filepath.Join(dir, "scenario_test.go"),
 		[]byte("package lib\n\nimport \"testing\"\n\nfunc TestUsed(t *testing.T) { _ = Used() }\n"), 0o644)
 
 	fns := []model.Function{
@@ -76,6 +78,48 @@ func TestMatchFuncs_unmatchedAbsent(t *testing.T) {
 	}
 	if _, ok := out[1]; ok {
 		t.Error("expected Unused to be absent from result")
+	}
+}
+
+// TestMatchFuncs_filenameFallbackForUnreferenced verifies the hybrid batch
+// behavior: in a multi-function file where content-aware catches some functions
+// (direct reference) but not others (indirect dispatch), the matched ones keep
+// their content-aware attribution while the unmatched ones fall back to the
+// conventional <base>_test.go.
+func TestMatchFuncs_filenameFallbackForUnreferenced(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/m\n\ngo 1.22\n"), 0o644)
+	// cmd.go declares two functions; cmd_test.go is the conventional name.
+	os.WriteFile(filepath.Join(dir, "cmd.go"),
+		[]byte("package cmd\n\nfunc Generate() int { return 1 }\n\nfunc Agent() int { return 2 }\n"), 0o644)
+	// TestGenerate references Generate directly (content-aware), while Agent is
+	// only exercised indirectly through runCmd, never by identifier.
+	os.WriteFile(filepath.Join(dir, "cmd_test.go"),
+		[]byte("package cmd\n\nimport \"testing\"\n\nfunc TestGenerate(t *testing.T) { _ = Generate() }\n\nfunc TestAgent(t *testing.T) { runCmd(t, \"agent\") }\n\nfunc runCmd(t *testing.T, name string) {}\n"), 0o644)
+
+	fns := []model.Function{
+		{Name: "Generate", File: "cmd.go"},
+		{Name: "Agent", File: "cmd.go"},
+	}
+	out := MatchFuncs(dir, fns)
+
+	tmGen, ok := out[0]
+	if !ok {
+		t.Fatal("expected Generate to be matched via content-aware")
+	}
+	if len(tmGen.TestFuncs) != 1 || tmGen.TestFuncs[0] != "TestGenerate" {
+		t.Errorf("Generate content-aware TestFuncs = %v, want [TestGenerate]", tmGen.TestFuncs)
+	}
+
+	tmAgent, ok := out[1]
+	if !ok {
+		t.Fatal("expected Agent to be matched via file-name fallback")
+	}
+	if len(tmAgent.Files) != 1 || filepath.Base(tmAgent.Files[0]) != "cmd_test.go" {
+		t.Errorf("Agent fallback Files = %v, want [cmd_test.go]", tmAgent.Files)
+	}
+	if tmAgent.TestFuncs != nil {
+		t.Errorf("Agent fallback TestFuncs = %v, want nil (runner resolves)", tmAgent.TestFuncs)
 	}
 }
 

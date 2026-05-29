@@ -144,23 +144,65 @@ func TestOnly(t *testing.T) { Used() }
 	}
 }
 
-// TestGoFuncMatcherNoFileNameFallback verifies that even when a canonically
-// named test file exists, attribution is purely content-aware: a function whose
-// name no test references is not matched despite the conventional file name.
-func TestGoFuncMatcherNoFileNameFallback(t *testing.T) {
+// TestGoFuncMatcherConventionalFileFallback verifies the hybrid second pass:
+// when content-aware finds no test referencing the function but a conventional
+// <base>_test.go exists on disk, MatchFunc falls back to file-name matching and
+// attributes that single test file with TestFuncs left nil.
+func TestGoFuncMatcherConventionalFileFallback(t *testing.T) {
 	root, pkgDir := writeFuncMatcherPkg(t, map[string]string{
+		// Conventional name for widget.go; the test dispatches indirectly and
+		// never references the Widget identifier, so content-aware misses it.
 		"widget_test.go": `package gen
 import "testing"
-func TestWidget(t *testing.T) { Other() }
+func TestWidget(t *testing.T) { runByName(t, "widget") }
+func runByName(t *testing.T, name string) {}
 `,
 	})
 
 	m := &GoFuncMatcher{}
-	// Source file widget.go has a conventional widget_test.go, but no test
-	// references the function Widget, so content-aware must not match it.
 	fn := &model.Function{Name: "Widget", File: filepath.Join(pkgDir, "widget.go")}
-	if tm, ok := m.MatchFunc(root, fn); ok {
-		t.Fatalf("content-aware must not fall back to file name, got %v", tm)
+	tm, ok := m.MatchFunc(root, fn)
+	if !ok {
+		t.Fatalf("expected file-name fallback to attribute Widget, got unmatched")
+	}
+	wantFile := filepath.Join(pkgDir, "widget_test.go")
+	if len(tm.Files) != 1 || tm.Files[0] != wantFile {
+		t.Fatalf("Files = %v, want [%s]", tm.Files, wantFile)
+	}
+	if tm.TestFuncs != nil {
+		t.Fatalf("TestFuncs = %v, want nil (runner resolves)", tm.TestFuncs)
+	}
+}
+
+// TestGoFuncMatcherContentAwareNotOverridden verifies content-aware wins: when a
+// test directly references the function, MatchFunc keeps the precise
+// content-aware attribution (with TestFuncs) and does not fall back to file name.
+func TestGoFuncMatcherContentAwareNotOverridden(t *testing.T) {
+	root, pkgDir := writeFuncMatcherPkg(t, map[string]string{
+		// Direct reference lives in a non-conventional file name; if fallback
+		// fired it would point at widget_test.go instead.
+		"direct_test.go": `package gen
+import "testing"
+func TestDirect(t *testing.T) { Widget() }
+`,
+		"widget_test.go": `package gen
+import "testing"
+func TestIndirect(t *testing.T) {}
+`,
+	})
+
+	m := &GoFuncMatcher{}
+	fn := &model.Function{Name: "Widget", File: filepath.Join(pkgDir, "widget.go")}
+	tm, ok := m.MatchFunc(root, fn)
+	if !ok {
+		t.Fatal("expected content-aware to attribute Widget")
+	}
+	wantFile := filepath.Join(pkgDir, "direct_test.go")
+	if len(tm.Files) != 1 || tm.Files[0] != wantFile {
+		t.Fatalf("Files = %v, want [%s] (content-aware, not fallback)", tm.Files, wantFile)
+	}
+	if len(tm.TestFuncs) != 1 || tm.TestFuncs[0] != "TestDirect" {
+		t.Fatalf("TestFuncs = %v, want [TestDirect]", tm.TestFuncs)
 	}
 }
 
