@@ -16,6 +16,8 @@ required:
     factory: "interface definition + factory dispatch"
     helper: "internal utility function"
     model: "data type definition"
+    util: "reusable utility function"
+    loader: "file or resource loader"
 
 optional:
   lang:

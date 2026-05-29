@@ -33,9 +33,7 @@ func indexPyFile(relPath, absPath string) []model.Function {
 		isNonEmpty := strings.TrimSpace(line) != ""
 
 		if m := pyClassDefPattern.FindStringSubmatch(line); m != nil {
-			if isNonEmpty {
-				lastNonEmptyLine = lineNum
-			}
+			updateLastNonEmpty(isNonEmpty, lineNum, &lastNonEmptyLine)
 			currentClass = m[2]
 			classIndent = pyIndent(m[1])
 			continue
@@ -43,24 +41,16 @@ func indexPyFile(relPath, absPath string) []model.Function {
 
 		fn, newClass := matchPyFunc(line, lineNum, relPath, relDir, currentClass, classIndent)
 		if fn != nil {
-			// Close the previous function's EndLine before appending the new one.
-			// lastNonEmptyLine holds the last non-empty line BEFORE this def line.
-			if n := len(functions); n > 0 && functions[n-1].EndLine == 0 {
-				functions[n-1].EndLine = lastNonEmptyLine
-			}
+			closePrevEndLine(functions, lastNonEmptyLine)
 			functions = append(functions, *fn)
 		}
 		currentClass = newClass
 
-		if isNonEmpty {
-			lastNonEmptyLine = lineNum
-		}
+		updateLastNonEmpty(isNonEmpty, lineNum, &lastNonEmptyLine)
 	}
 
 	// Close the last function's EndLine at end of file.
-	if n := len(functions); n > 0 && functions[n-1].EndLine == 0 {
-		functions[n-1].EndLine = lastNonEmptyLine
-	}
+	closePrevEndLine(functions, lastNonEmptyLine)
 
 	return functions
 }

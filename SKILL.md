@@ -24,7 +24,7 @@ tsma indexes every function in a codebase, detects missing tests, measures branc
 go install github.com/park-jun-woo/tsma/cmd/tsma@latest
 ```
 
-Requires Go 1.25+.
+**Prerequisites:** Go 1.25+ and gcc (cgo required). tsma uses cgo dependencies — without gcc the build fails.
 
 ## The Only Command You Need
 
