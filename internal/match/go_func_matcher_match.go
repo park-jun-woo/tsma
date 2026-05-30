@@ -8,10 +8,12 @@ import (
 	"github.com/park-jun-woo/tsma/internal/model"
 )
 
-// MatchFunc builds the content-aware test index for the function's package once
-// and looks the function up by its bare name. It returns the deduplicated set of
-// test files and test functions that reference the function (content-aware
-// precision: 1:N multi-file attribution is preserved). When content-aware
+// MatchFunc builds the content-aware test index and the source-receiver map for
+// the function's package once and looks the function up by its bare name with
+// receiver-aware filtering. It returns the deduplicated set of test files and
+// test functions that reference the function (content-aware precision: 1:N
+// multi-file attribution is preserved; same-named methods on different
+// receivers are kept apart). When content-aware
 // matching finds nothing — the package cannot be indexed, no test references the
 // function, or the refs resolve to no files — it falls back to file-name
 // matching via goFilenameFallback, attributing the conventional <base>_test.go
@@ -28,7 +30,11 @@ func (m *GoFuncMatcher) MatchFunc(projectRoot string, fn *model.Function) (TestM
 	if err != nil {
 		return goFilenameFallback(projectRoot, fn)
 	}
-	refs, ok := MatchFuncByName(idx, fn)
+	// Build the source-receiver map for the same package directory once, exactly
+	// as the batch path does, so single-func re-matching resolves same-name-
+	// multiple identically (a read error leaves it nil -> non-regressing).
+	srcReceivers, _ := BuildPkgSourceReceivers(projectRoot, pkgDir)
+	refs, ok := MatchFuncByName(idx, srcReceivers, fn)
 	if !ok {
 		return goFilenameFallback(projectRoot, fn)
 	}

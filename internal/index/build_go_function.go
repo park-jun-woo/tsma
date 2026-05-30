@@ -25,6 +25,7 @@ func buildGoFunction(fd *ast.FuncDecl, fset *token.FileSet, relPath, pkgDir stri
 	return model.Function{
 		QualifiedName: qualifiedName,
 		Name:          name,
+		Receiver:      receiver,
 		File:          relPath,
 		StartLine:     fset.Position(fd.Pos()).Line,
 		EndLine:       fset.Position(fd.End()).Line,

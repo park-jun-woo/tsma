@@ -22,10 +22,10 @@ func helper() { NotATest() }
 	if _, ok := result["helper"]; ok {
 		t.Errorf("non-test helper must not be a key: %v", result)
 	}
-	if !hasAll(result["TestA"], "Alpha") {
+	if !hasAll(refNames(result["TestA"]), "Alpha") {
 		t.Errorf("TestA refs = %v, want Alpha", result["TestA"])
 	}
-	if !hasAll(result["TestB"], "Beta") {
+	if !hasAll(refNames(result["TestB"]), "Beta") {
 		t.Errorf("TestB refs = %v, want Beta", result["TestB"])
 	}
 }

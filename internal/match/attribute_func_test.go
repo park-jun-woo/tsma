@@ -32,8 +32,9 @@ func TestAttributeFunc_contentAwareWins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	srcRecv, _ := BuildPkgSourceReceivers(root, ".")
 	fn := &model.Function{Name: "Widget", File: "widget.go"}
-	tm, ok := attributeFunc(root, idx, fn)
+	tm, ok := attributeFunc(root, idx, srcRecv, fn)
 	if !ok {
 		t.Fatal("expected Widget to be attributed content-aware")
 	}
@@ -64,8 +65,9 @@ func TestAttributeFunc_fallbackWhenUnreferenced(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	srcRecv, _ := BuildPkgSourceReceivers(root, ".")
 	fn := &model.Function{Name: "agentCmd", File: "agent.go"}
-	tm, ok := attributeFunc(root, idx, fn)
+	tm, ok := attributeFunc(root, idx, srcRecv, fn)
 	if !ok {
 		t.Fatal("expected agentCmd to fall back to agent_test.go")
 	}
@@ -98,8 +100,9 @@ func TestAttributeFunc_noMatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	srcRecv, _ := BuildPkgSourceReceivers(root, ".")
 	fn := &model.Function{Name: "Lonely", File: "lonely.go"}
-	if tm, ok := attributeFunc(root, idx, fn); ok {
+	if tm, ok := attributeFunc(root, idx, srcRecv, fn); ok {
 		t.Fatalf("expected Lonely to be unmatched, got %v", tm)
 	}
 }
@@ -116,7 +119,7 @@ func TestAttributeFunc_nilIndexFallback(t *testing.T) {
 	}
 
 	fn := &model.Function{Name: "Thing", File: "thing.go"}
-	tm, ok := attributeFunc(root, nil, fn)
+	tm, ok := attributeFunc(root, nil, nil, fn)
 	if !ok {
 		t.Fatal("expected nil-index path to use file-name fallback")
 	}

@@ -5,6 +5,7 @@ package model
 type Function struct {
 	QualifiedName string   `json:"qualified_name"`
 	Name          string   `json:"name"`
+	Receiver      string   `json:"receiver,omitempty"`
 	File          string   `json:"file"`
 	StartLine     int      `json:"start_line"`
 	EndLine       int      `json:"end_line"`

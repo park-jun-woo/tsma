@@ -6,4 +6,5 @@ package match
 type testRef struct {
 	File     string // project-root-relative path of the _test.go file
 	TestFunc string // name of the func TestXxx that references the identifier
+	Receiver string // statically-resolved receiver type of the call ("" = unknown)
 }

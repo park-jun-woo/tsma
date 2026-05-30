@@ -1,14 +1,8 @@
-//ff:func feature=cli type=command control=selection
-//ff:what Orchestrates the next-function workflow: detect, run, measure, advance
+//ff:func feature=cli type=command control=sequence
+//ff:what Dispatches `tsma next` to the first-pass watermark scan or the interactive rotating cursor
 package cli
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/park-jun-woo/tsma/internal/match"
-	"github.com/park-jun-woo/tsma/internal/model"
-	"github.com/park-jun-woo/tsma/internal/session"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +10,13 @@ var nextCmd = &cobra.Command{
 	Use:   "next",
 	Short: "Detect test changes, run tests, measure coverage, and advance",
 	Long: `The core command. Finds the current TODO function, detects test file
-changes, runs tests, measures coverage, and advances to the next function.`,
+changes, runs tests, measures coverage, and advances to the next function.
+
+The first pass (after reset) measures every function once with its existing
+tests: 100% become PASS, while partials and untested functions stay TODO. A
+single partial never blocks the functions behind it from being measured. Once
+every function has been measured once, subsequent runs surface the remaining
+TODOs one at a time via a rotating cursor.`,
 	RunE: runNext,
 }
 
@@ -31,105 +31,12 @@ func runNext(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fn := advanceToNext(sess)
-	if fn == nil {
-		fmt.Println("All functions complete!")
-		if err := session.Save(root, sess); err != nil {
-			return fmt.Errorf("save session: %w", err)
-		}
-		return nil
+	// A prior run may have left the watermark at the end without flipping the
+	// flag (e.g. the last first-pass function was a PASS); reconcile here.
+	finishFirstPassIfDone(sess)
+
+	if sess.FirstPassDone {
+		return runNextInteractive(root, sess)
 	}
-
-	changed, tm := detectTestChange(root, sess.Lang, fn)
-	testFile := representativeTestFile(tm)
-	if len(tm.Files) == 0 {
-		// Content-aware (and file-name fallback) found no test for this
-		// function. Only then do we suggest a rename: with content-aware
-		// attribution a mismatched file name is no longer the primary problem,
-		// so the rename hint is a last-resort fallback for the not-found case.
-		printTodoFunction(fn, "")
-		if misnamed, canonical, found := match.FindMisnamedTest(root, sess.Lang, fn.File); found {
-			printRenameInstruction(misnamed, canonical)
-		} else {
-			printNextInstruction()
-		}
-		if err := session.Save(root, sess); err != nil {
-			return fmt.Errorf("save session: %w", err)
-		}
-		return nil
-	}
-
-	if !changed {
-		printTodoFunction(fn, testFile)
-		printNextInstruction()
-		if err := session.Save(root, sess); err != nil {
-			return fmt.Errorf("save session: %w", err)
-		}
-		return nil
-	}
-
-	result := runAndMeasure(root, sess.Lang, fn, tm)
-
-	switch result.outcome {
-	case outcomeTestFail:
-		setTestFiles(fn, tm)
-		fn.TestMtime = result.mtime
-		fn.FailOutput = result.failOutput
-		fmt.Fprintf(os.Stderr, "FAIL  %s\n", fn.Name)
-		fmt.Fprintf(os.Stderr, "  %s\n", result.failOutput)
-		printTodoFunction(fn, testFile)
-		printNextInstruction()
-
-	case outcomePass:
-		fn.Status = model.StatusPass
-		setTestFiles(fn, tm)
-		fn.TestMtime = result.mtime
-		fn.CoveragePct = 100
-		fn.FailOutput = ""
-		sess.CurrentIndex++
-		fmt.Printf("PASS  %s  100%%\n", fn.Name)
-		next := advanceToNext(sess)
-		if next != nil {
-			printContinueInstruction()
-			printTodoFunction(next, next.TestFile)
-			printNextInstruction()
-		} else {
-			fmt.Println("All functions complete!")
-		}
-
-	case outcomeDone:
-		fn.Status = model.StatusDone
-		setTestFiles(fn, tm)
-		fn.TestMtime = result.mtime
-		fn.CoveragePct = result.coveragePct
-		fn.FailOutput = ""
-		sess.CurrentIndex++
-		fmt.Printf("DONE  %s  %.0f%%\n", fn.Name, result.coveragePct)
-		next := advanceToNext(sess)
-		if next != nil {
-			printContinueInstruction()
-			printTodoFunction(next, next.TestFile)
-			printNextInstruction()
-		} else {
-			fmt.Println("All functions complete!")
-		}
-
-	case outcomeRetry:
-		setTestFiles(fn, tm)
-		fn.TestMtime = result.mtime
-		fn.Attempt = result.attempt
-		fn.CoveragePct = result.coveragePct
-		fn.FailOutput = ""
-		fmt.Printf("PARTIAL  %s  %.0f%%  (attempt %d — improve coverage)\n",
-			fn.Name, result.coveragePct, result.attempt)
-		printUncovered(result.uncovered)
-		printTodoFunction(fn, testFile)
-		printNextInstruction()
-	}
-
-	sess.RecalcSummary()
-	if err := session.Save(root, sess); err != nil {
-		return fmt.Errorf("save session: %w", err)
-	}
-	return nil
+	return runNextFirstPass(root, sess)
 }

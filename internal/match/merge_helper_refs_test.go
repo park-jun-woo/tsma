@@ -33,11 +33,12 @@ func helper() {
 }
 `, "helper")
 
-	refs := map[string]struct{}{"Existing": {}}
+	refs := map[calledRef]struct{}{{Name: "Existing"}: {}}
 	mergeHelperRefs(refs, helper)
 
-	if !hasAll(refs, "Existing", "ReadSource", "Validate") {
-		t.Errorf("mergeHelperRefs result = %v, want to include Existing,ReadSource,Validate", refs)
+	names := refNames(refs)
+	if !hasAll(names, "Existing", "ReadSource", "Validate") {
+		t.Errorf("mergeHelperRefs result = %v, want to include Existing,ReadSource,Validate", names)
 	}
 	if len(refs) != 3 {
 		t.Errorf("len = %d, want 3: %v", len(refs), refs)
@@ -49,10 +50,10 @@ func TestMergeHelperRefsOverlap(t *testing.T) {
 func helper() { ReadSource() }
 `, "helper")
 
-	refs := map[string]struct{}{"ReadSource": {}}
+	refs := map[calledRef]struct{}{{Name: "ReadSource"}: {}}
 	mergeHelperRefs(refs, helper)
 
-	if len(refs) != 1 || !hasAll(refs, "ReadSource") {
+	if len(refs) != 1 || !hasAll(refNames(refs), "ReadSource") {
 		t.Errorf("mergeHelperRefs overlap = %v, want single ReadSource", refs)
 	}
 }

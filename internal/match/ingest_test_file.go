@@ -4,16 +4,24 @@ package match
 
 // ingestTestFile parses the test file at absPath and records, for every
 // identifier referenced by each TestXxx in the file, a testRef pointing back to
-// that test (using rel as the stored path). Files that fail to parse are
-// skipped so one bad file does not abort the whole package index.
+// that test (using rel as the stored path). The index key stays the bare
+// identifier name; the call's statically-resolved receiver type is carried on
+// the testRef so receiver-aware lookup can filter the bucket. A name called on
+// several receivers within one test produces one testRef per (name, receiver)
+// pair. Files that fail to parse are skipped so one bad file does not abort the
+// whole package index.
 func ingestTestFile(idx *PkgTestIndex, absPath, rel string) {
 	funcs, err := parseTestFileFuncs(absPath)
 	if err != nil {
 		return
 	}
-	for testFunc, idents := range testRefsInFile(funcs) {
-		for ident := range idents {
-			idx.refs[ident] = append(idx.refs[ident], testRef{File: rel, TestFunc: testFunc})
+	for testFunc, refs := range testRefsInFile(funcs) {
+		for ref := range refs {
+			idx.refs[ref.Name] = append(idx.refs[ref.Name], testRef{
+				File:     rel,
+				TestFunc: testFunc,
+				Receiver: ref.Receiver,
+			})
 		}
 	}
 }

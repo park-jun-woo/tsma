@@ -273,13 +273,13 @@ func TestX(t *testing.T) { Generate("a", "b") }
 	}
 
 	fn := &model.Function{Name: "Generate", QualifiedName: "internal/gen.Generate"}
-	refs, ok := MatchFuncByName(idx, fn)
+	refs, ok := MatchFuncByName(idx, nil, fn)
 	if !ok || len(refs) != 1 || refs[0].TestFunc != "TestX" {
 		t.Fatalf("MatchFuncByName(Generate) = %v ok=%v, want [TestX]", refs, ok)
 	}
 
 	missing := &model.Function{Name: "Nope"}
-	if refs, ok := MatchFuncByName(idx, missing); ok || refs != nil {
+	if refs, ok := MatchFuncByName(idx, nil, missing); ok || refs != nil {
 		t.Fatalf("MatchFuncByName(Nope) = %v ok=%v, want empty", refs, ok)
 	}
 }

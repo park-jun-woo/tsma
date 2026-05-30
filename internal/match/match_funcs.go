@@ -35,11 +35,15 @@ func MatchFuncs(projectRoot string, fns []model.Function) map[int]TestMatch {
 	}
 
 	for dir, idxs := range byDir {
-		// idx may be nil when the package cannot be indexed; attributeFunc then
-		// relies solely on the file-name fallback.
+		// idx and srcReceivers may be nil when the package cannot be parsed;
+		// attributeFunc then relies solely on the file-name fallback (idx nil)
+		// and treats every name as same-name-single (srcReceivers nil). Both
+		// are built once per directory and reused for all funcs in it, mirroring
+		// the single-func path's per-package build.
 		idx, _ := BuildPkgTestIndex(projectRoot, dir)
+		srcReceivers, _ := BuildPkgSourceReceivers(projectRoot, dir)
 		for _, i := range idxs {
-			if tm, ok := attributeFunc(projectRoot, idx, &fns[i]); ok {
+			if tm, ok := attributeFunc(projectRoot, idx, srcReceivers, &fns[i]); ok {
 				out[i] = tm
 			}
 		}

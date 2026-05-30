@@ -15,7 +15,7 @@ func helper(t *testing.T) { ViaHelper() }
 	if err != nil {
 		t.Fatal(err)
 	}
-	refs := expandTestRefs(funcs["TestX"], funcs)
+	refs := refNames(expandTestRefs(funcs["TestX"], funcs))
 
 	// Direct callee, the helper itself, and the helper's 1-hop callee.
 	if !hasAll(refs, "Direct", "helper", "ViaHelper") {
@@ -34,7 +34,7 @@ func hopTwo(t *testing.T) { DeepTarget() }
 	if err != nil {
 		t.Fatal(err)
 	}
-	refs := expandTestRefs(funcs["TestDeep"], funcs)
+	refs := refNames(expandTestRefs(funcs["TestDeep"], funcs))
 
 	if !hasAll(refs, "hopOne", "hopTwo") {
 		t.Errorf("expandTestRefs = %v, want hopOne,hopTwo (1-hop)", refs)
@@ -55,7 +55,7 @@ func TestInner(t *testing.T) { Hidden() }
 	if err != nil {
 		t.Fatal(err)
 	}
-	refs := expandTestRefs(funcs["TestOuter"], funcs)
+	refs := refNames(expandTestRefs(funcs["TestOuter"], funcs))
 	if _, ok := refs["TestInner"]; !ok {
 		t.Errorf("TestInner should be a direct ref: %v", refs)
 	}
