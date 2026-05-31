@@ -4,11 +4,11 @@ import "testing"
 
 func TestCountPyMissingBranches(t *testing.T) {
 	tests := []struct {
-		name           string
-		fileCov        *pyCoverageFile
-		r              pyFuncRange
-		wantTotal      int
-		wantUncovered  int
+		name          string
+		fileCov       *pyCoverageFile
+		r             pyFuncRange
+		wantTotal     int
+		wantUncovered int
 	}{
 		{
 			name: "missing branches in range",

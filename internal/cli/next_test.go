@@ -258,10 +258,12 @@ func TestRunNext_retryThenDone(t *testing.T) {
 	os.WriteFile(filepath.Join(srcDir, "foo_test.go"),
 		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\tif Foo(1) != 1 {\n\t\tt.Fatal(\"a\")\n\t}\n}\n"), 0o644)
 
-	// Attempt 0 -> outcomeRetry (PARTIAL).
+	// Attempt 0 -> outcomeRetry (PARTIAL). MaxAttempts 2 so the second measured
+	// presentation (attempt 2) reaches the auto-DONE threshold.
 	sess := &model.Session{
-		Project: dir,
-		Lang:    "go",
+		Project:     dir,
+		Lang:        "go",
+		MaxAttempts: 2,
 		Functions: []model.Function{
 			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
 		},
@@ -364,11 +366,12 @@ func TestRunNext_doneThenNextTodo(t *testing.T) {
 	os.WriteFile(filepath.Join(srcDir, "foo_test.go"),
 		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\tif Foo(1) != 1 {\n\t\tt.Fatal(\"a\")\n\t}\n}\n"), 0o644)
 
-	// Foo already on attempt 1 so this measurement triggers DONE, and Bar
-	// remains TODO so advanceToNext returns non-nil.
+	// Foo already on attempt 1 so this measurement triggers DONE (MaxAttempts 2),
+	// and Bar remains TODO so advanceToNext returns non-nil.
 	sess := &model.Session{
-		Project: dir,
-		Lang:    "go",
+		Project:     dir,
+		Lang:        "go",
+		MaxAttempts: 2,
 		Functions: []model.Function{
 			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo, Attempt: 1},
 			{Name: "Bar", File: "pkg/bar.go", StartLine: 1, EndLine: 2, Status: model.StatusTodo},

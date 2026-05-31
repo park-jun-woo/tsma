@@ -23,24 +23,24 @@ func TestParseCoverPositions(t *testing.T) {
 			wantEnd:   2,
 		},
 		{
-			name:    "no comma",
+			name:      "no comma",
 			positions: "10.2",
-			wantErr: true,
+			wantErr:   true,
 		},
 		{
-			name:    "too many commas",
+			name:      "too many commas",
 			positions: "10.2,20.5,30.1",
-			wantErr: true,
+			wantErr:   true,
 		},
 		{
-			name:    "no dot in start",
+			name:      "no dot in start",
 			positions: "10,20.5",
-			wantErr: true,
+			wantErr:   true,
 		},
 		{
-			name:    "no dot in end",
+			name:      "no dot in end",
 			positions: "10.2,20",
-			wantErr: true,
+			wantErr:   true,
 		},
 	}
 

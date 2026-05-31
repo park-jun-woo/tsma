@@ -7,7 +7,7 @@ func TestComputePyFuncCoverageWithData(t *testing.T) {
 		Files: map[string]pyCoverageFile{
 			"handler.py": {
 				ExecutedLines:    []int{10, 11},
-				MissingLines:    []int{12},
+				MissingLines:     []int{12},
 				ExecutedBranches: [][]int{{11, 15}},
 				MissingBranches:  nil,
 			},

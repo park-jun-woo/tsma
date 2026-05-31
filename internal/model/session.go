@@ -10,6 +10,7 @@ type Session struct {
 	CheckedAt     time.Time  `json:"checked_at"`
 	CurrentIndex  int        `json:"current_index"`
 	FirstPassDone bool       `json:"first_pass_done,omitempty"`
+	MaxAttempts   int        `json:"max_attempts,omitempty"`
 	Functions     []Function `json:"functions"`
 	Summary       Summary    `json:"summary"`
 }

@@ -40,17 +40,14 @@ func runNextInteractive(root string, sess *model.Session) error {
 	}
 
 	if !changed {
-		// Unchanged partial: surface it, then move the cursor so the next call
-		// shows the next TODO rather than re-pinning this one.
-		printTodoFunction(fn, testFile)
-		printNextInstruction()
-		advanceCursor(sess)
-		maybePrintNoProgressSummary(root, sess)
-		sess.RecalcSummary()
-		return saveSession(root, sess)
+		// Unchanged partial: count this presentation toward the auto-DONE
+		// threshold. At the threshold it is accepted as best-effort DONE;
+		// otherwise it is re-surfaced and the cursor rotates so a single partial
+		// never traps the TODOs behind it (BUG-002 ★).
+		return resurfacePartial(root, sess, fn, tm, testFile)
 	}
 
-	result := runAndMeasure(root, sess.Lang, fn, tm)
+	result := runAndMeasure(root, sess.Lang, fn, tm, effectiveMaxAttempts(sess))
 
 	switch result.outcome {
 	case outcomeTestFail:

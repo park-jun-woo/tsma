@@ -26,13 +26,13 @@ func TestCompositeLitType(t *testing.T) {
 		{`&T{}`, "T"},
 		{`(&T{})`, "T"},
 		{`T{a: 1}`, "T"},
-		{`pkg.T{}`, ""},  // selector type, not a bare Ident
-		{`x`, ""},        // bare variable
-		{`NewT()`, ""},   // constructor call
-		{`*p`, ""},       // dereference (StarExpr), not &
-		{`[]int{}`, ""},  // composite literal but not an Ident type
-		{`-x`, ""},       // UnaryExpr whose op is not & (negation)
-		{`<-ch`, ""},     // UnaryExpr whose op is not & (channel receive)
+		{`pkg.T{}`, ""}, // selector type, not a bare Ident
+		{`x`, ""},       // bare variable
+		{`NewT()`, ""},  // constructor call
+		{`*p`, ""},      // dereference (StarExpr), not &
+		{`[]int{}`, ""}, // composite literal but not an Ident type
+		{`-x`, ""},      // UnaryExpr whose op is not & (negation)
+		{`<-ch`, ""},    // UnaryExpr whose op is not & (channel receive)
 	}
 	for _, c := range cases {
 		if got := compositeLitType(parseExpr(t, c.src)); got != c.want {

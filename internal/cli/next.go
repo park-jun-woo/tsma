@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence
-//ff:what Dispatches `tsma next` to the first-pass watermark scan or the interactive rotating cursor
+//ff:what Runs `tsma next`: analyze-on-first-run (batch-measure all), then the interactive rotating cursor
 package cli
 
 import (
@@ -9,15 +9,18 @@ import (
 var nextCmd = &cobra.Command{
 	Use:   "next",
 	Short: "Detect test changes, run tests, measure coverage, and advance",
-	Long: `The core command. Finds the current TODO function, detects test file
-changes, runs tests, measures coverage, and advances to the next function.
-
-The first pass (after reset) measures every function once with its existing
-tests: 100% become PASS, while partials and untested functions stay TODO. A
-single partial never blocks the functions behind it from being measured. Once
-every function has been measured once, subsequent runs surface the remaining
-TODOs one at a time via a rotating cursor.`,
+	Long: `The core command. On the first run (no session) it indexes every
+function, matches test files, and batch-measures coverage for all of them in a
+single pass: 100%% functions become PASS, partials become measured TODOs, and
+untested functions stay TODO. Subsequent runs surface the remaining TODOs one at
+a time via a rotating cursor, re-measuring a TODO whose test changed and never
+stalling on a single partial.`,
 	RunE: runNext,
+}
+
+func init() {
+	nextCmd.Flags().Int("max-attempts", defaultMaxAttempts,
+		"auto-DONE a partial function after this many tsma next presentations (must be >= 1)")
 }
 
 func runNext(cmd *cobra.Command, args []string) error {
@@ -31,12 +34,13 @@ func runNext(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// A prior run may have left the watermark at the end without flipping the
-	// flag (e.g. the last first-pass function was a PASS); reconcile here.
-	finishFirstPassIfDone(sess)
-
-	if sess.FirstPassDone {
-		return runNextInteractive(root, sess)
+	if err := resolveMaxAttempts(cmd, sess); err != nil {
+		return err
 	}
-	return runNextFirstPass(root, sess)
+
+	// The first scan batch-measures every function during analysis (and sets
+	// FirstPassDone), so the session is always fully measured here. `tsma next`
+	// is therefore purely the interactive rotating cursor over the remaining
+	// TODOs — there is no incremental first-pass step anymore.
+	return runNextInteractive(root, sess)
 }

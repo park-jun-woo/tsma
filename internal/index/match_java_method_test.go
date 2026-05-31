@@ -17,10 +17,10 @@ func TestMatchJavaMethod(t *testing.T) {
 		{"if (x > 0) {", "", false},                  // control statement
 		{"for (int i = 0; i < n; i++) {", "", false}, // control statement
 		{"} else {", "", false},
-		{"public class Foo {", "", false},     // type declaration
-		{"interface Bar {", "", false},        // type declaration
-		{"foo();", "", false},                 // bare call, no body open
-		{"return compute(x);", "", false},     // statement
+		{"public class Foo {", "", false}, // type declaration
+		{"interface Bar {", "", false},    // type declaration
+		{"foo();", "", false},             // bare call, no body open
+		{"return compute(x);", "", false}, // statement
 		{"public int field = compute();", "", false},
 	}
 	for _, c := range cases {

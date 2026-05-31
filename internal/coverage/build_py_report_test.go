@@ -7,7 +7,7 @@ func TestBuildPyReport(t *testing.T) {
 		Files: map[string]pyCoverageFile{
 			"handler.py": {
 				ExecutedLines:    []int{10, 11, 12},
-				MissingLines:    []int{13},
+				MissingLines:     []int{13},
 				ExecutedBranches: [][]int{{12, 15}},
 				MissingBranches:  [][]int{{12, 13}},
 			},

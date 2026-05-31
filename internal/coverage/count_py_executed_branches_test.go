@@ -4,11 +4,11 @@ import "testing"
 
 func TestCountPyExecutedBranches(t *testing.T) {
 	tests := []struct {
-		name           string
-		fileCov        *pyCoverageFile
-		r              pyFuncRange
-		wantTotal      int
-		wantCovered    int
+		name        string
+		fileCov     *pyCoverageFile
+		r           pyFuncRange
+		wantTotal   int
+		wantCovered int
 	}{
 		{
 			name: "branches in range",

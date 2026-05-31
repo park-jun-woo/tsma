@@ -20,7 +20,7 @@ func TestParsePyCoverageJSON(t *testing.T) {
 		Files: map[string]pyCoverageFile{
 			"handler.py": {
 				ExecutedLines:    []int{1, 2, 3, 5, 6},
-				MissingLines:    []int{4, 7},
+				MissingLines:     []int{4, 7},
 				ExecutedBranches: [][]int{{3, 5}, {3, 7}},
 				MissingBranches:  [][]int{{5, 6}},
 			},
@@ -179,7 +179,7 @@ func TestComputePyFuncCoverage(t *testing.T) {
 		Files: map[string]pyCoverageFile{
 			"handler.py": {
 				ExecutedLines:    []int{10, 11, 12, 15},
-				MissingLines:    []int{13, 14},
+				MissingLines:     []int{13, 14},
 				ExecutedBranches: [][]int{{12, 15}},
 				MissingBranches:  [][]int{{12, 13}},
 			},

@@ -4,12 +4,12 @@ import "testing"
 
 func TestSplitCoverLineParts(t *testing.T) {
 	tests := []struct {
-		name       string
-		line       string
-		wantFile   string
-		wantStmts  string
-		wantCount  string
-		wantErr    bool
+		name      string
+		line      string
+		wantFile  string
+		wantStmts string
+		wantCount string
+		wantErr   bool
 	}{
 		{
 			name:      "valid line",

@@ -14,10 +14,10 @@ func TestJavaPackagePattern(t *testing.T) {
 
 func TestJavaTypePattern(t *testing.T) {
 	matches := map[string]string{
-		"public class Foo {":               "Foo",
-		"final class Bar implements X {":    "Bar",
-		"interface I {":                     "I",
-		"enum Color {":                      "Color",
+		"public class Foo {":                 "Foo",
+		"final class Bar implements X {":     "Bar",
+		"interface I {":                      "I",
+		"enum Color {":                       "Color",
 		"public record Point(int x, int y){": "Point",
 	}
 	for line, want := range matches {

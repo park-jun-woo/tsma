@@ -10,12 +10,12 @@ func TestIsTestFuncName(t *testing.T) {
 		{"TestFoo", true},
 		{"TestX", true},
 		{"Test_", true},
-		{"Test", false},  // bare Test is excluded
+		{"Test", false}, // bare Test is excluded
 		{"Tes", false},
 		{"", false},
-		{"testFoo", false},     // lowercase, not an entrypoint
+		{"testFoo", false}, // lowercase, not an entrypoint
 		{"BenchmarkFoo", false},
-		{"helperTest", false},  // Test not a prefix
+		{"helperTest", false}, // Test not a prefix
 	}
 	for _, c := range cases {
 		if got := isTestFuncName(c.name); got != c.want {

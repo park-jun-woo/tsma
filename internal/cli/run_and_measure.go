@@ -11,8 +11,10 @@ import (
 
 // runAndMeasure executes the matched tests, then measures coverage if they pass.
 // The mtime recorded is the combined (max) mtime across all matched test files,
-// matching detectTestChange's change signature.
-func runAndMeasure(root, lang string, fn *model.Function, tm match.TestMatch) measureResult {
+// matching detectTestChange's change signature. A still-partial result becomes
+// DONE once the function's presentation count reaches maxAttempts (via
+// attemptOutcome), otherwise it is reported as a retry to keep it TODO.
+func runAndMeasure(root, lang string, fn *model.Function, tm match.TestMatch, maxAttempts int) measureResult {
 	r := runner.NewRunner(lang)
 	mtime := combinedTestMtime(root, tm.Files)
 
@@ -38,7 +40,7 @@ func runAndMeasure(root, lang string, fn *model.Function, tm match.TestMatch) me
 	}
 
 	attempt := fn.Attempt + 1
-	if attempt >= 2 {
+	if attemptOutcome(attempt, maxAttempts) == outcomeDone {
 		return measureResult{
 			outcome:     outcomeDone,
 			mtime:       mtime,

@@ -258,9 +258,12 @@ func TestInteractive_changedPartialSecondAttemptBecomesDone(t *testing.T) {
 	os.WriteFile(filepath.Join(pb, "ok.go"),
 		[]byte("package b\n\nfunc Ok() int { return 1 }\n"), 0o644)
 
+	// MaxAttempts 2 so a changed partial already at Attempt 1 reaches the
+	// threshold on this (second) measured presentation -> auto-DONE.
 	sess := &model.Session{
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
+		MaxAttempts:   2,
 		Functions: []model.Function{
 			{Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, CoveragePct: 50, Attempt: 1,

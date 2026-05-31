@@ -98,11 +98,23 @@ func TestAnalyzeProject_goProject(t *testing.T) {
 	if len(sess.Functions) == 0 {
 		t.Fatal("expected at least one indexed function")
 	}
-	// Every function should have been marked TODO by the match loop.
-	for _, fn := range sess.Functions {
-		if fn.Status != model.StatusTodo {
-			t.Errorf("function %s: expected status %s, got %s", fn.Name, model.StatusTodo, fn.Status)
+	// The first-scan batch measures coverage during analysis, so the session is
+	// fully measured and first-pass mode is already done.
+	if !sess.FirstPassDone {
+		t.Error("expected FirstPassDone after the analysis batch measures every function")
+	}
+	// Greet is fully exercised by TestGreet, so it must be PASS after the batch.
+	var greet *model.Function
+	for i := range sess.Functions {
+		if sess.Functions[i].Name == "Greet" {
+			greet = &sess.Functions[i]
 		}
+	}
+	if greet == nil {
+		t.Fatal("expected Greet to be indexed")
+	}
+	if greet.Status != model.StatusPass {
+		t.Errorf("Greet: expected PASS after batch measurement, got %s", greet.Status)
 	}
 	// At least one function should have its TestFile populated (found branch).
 	foundTest := false

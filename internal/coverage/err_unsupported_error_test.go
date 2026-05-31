@@ -7,8 +7,8 @@ import (
 
 func TestErrUnsupportedError(t *testing.T) {
 	tests := []struct {
-		lang     string
-		wantSub  string
+		lang    string
+		wantSub string
 	}{
 		{"rust", "rust"},
 		{"java", "java"},

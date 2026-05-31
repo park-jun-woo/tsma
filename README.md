@@ -1,6 +1,6 @@
 # tsma
 
-[![Version](https://img.shields.io/badge/version-v0.3.4-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
+[![Version](https://img.shields.io/badge/version-v0.4.0-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
 

@@ -40,6 +40,15 @@ func analyzeProject(projectRoot string) (*model.Session, error) {
 		CheckedAt: time.Now(),
 		Functions: functions,
 	}
+
+	// First-scan batch: measure every function's coverage now so a single
+	// `tsma next` yields PASS for 100% functions and measured TODOs for the
+	// rest. After this the session is fully measured, so first-pass mode is done
+	// and `tsma next` goes straight to the interactive rotating cursor.
+	fmt.Fprintln(os.Stderr, "Measuring coverage...")
+	batchMeasure(projectRoot, sess)
+	sess.FirstPassDone = true
+	sess.CurrentIndex = 0
 	sess.RecalcSummary()
 
 	return sess, nil

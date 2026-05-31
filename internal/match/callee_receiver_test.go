@@ -12,10 +12,10 @@ func TestCalleeReceiver(t *testing.T) {
 		want string
 	}{
 		{`(&GoFile{}).GetFuncs()`, "GoFile"}, // composite literal
-		{`f.GetFuncs()`, "CSharpFile"},        // local var lookup
-		{`g.GetFuncs()`, ""},                   // unknown var
-		{`Plain()`, ""},                        // free function (Ident callee)
-		{`obj.field.M()`, ""},                  // nested selector, X is a SelectorExpr
+		{`f.GetFuncs()`, "CSharpFile"},       // local var lookup
+		{`g.GetFuncs()`, ""},                 // unknown var
+		{`Plain()`, ""},                      // free function (Ident callee)
+		{`obj.field.M()`, ""},                // nested selector, X is a SelectorExpr
 	}
 	for _, c := range cases {
 		call, ok := parseExpr(t, c.src).(*ast.CallExpr)

@@ -29,7 +29,7 @@ func TestRunAndMeasure_pass(t *testing.T) {
 	os.Chdir(dir)
 
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8}
-	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")))
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")), 3)
 
 	if res.outcome != outcomePass {
 		t.Fatalf("expected outcomePass, got %v (pct=%v)", res.outcome, res.coveragePct)
@@ -54,7 +54,7 @@ func TestRunAndMeasure_testFail(t *testing.T) {
 	os.Chdir(dir)
 
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3}
-	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")))
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")), 3)
 
 	if res.outcome != outcomeTestFail {
 		t.Fatalf("expected outcomeTestFail, got %v", res.outcome)
@@ -79,9 +79,9 @@ func TestRunAndMeasure_retry(t *testing.T) {
 	defer os.Chdir(orig)
 	os.Chdir(dir)
 
-	// Attempt 0 -> attempt becomes 1 -> outcomeRetry.
+	// Attempt 0 -> attempt becomes 1; with maxAttempts=3 (1 < 3) -> outcomeRetry.
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Attempt: 0}
-	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")))
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")), 3)
 
 	if res.outcome != outcomeRetry {
 		t.Fatalf("expected outcomeRetry, got %v", res.outcome)
@@ -111,12 +111,41 @@ func TestRunAndMeasure_done(t *testing.T) {
 	defer os.Chdir(orig)
 	os.Chdir(dir)
 
-	// Attempt 1 -> attempt becomes 2 (>=2) -> outcomeDone.
+	// Attempt 1 -> attempt becomes 2; with maxAttempts=2 (2 >= 2) -> outcomeDone.
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Attempt: 1}
-	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")))
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")), 2)
 
 	if res.outcome != outcomeDone {
 		t.Fatalf("expected outcomeDone, got %v", res.outcome)
+	}
+	if res.attempt != 2 {
+		t.Errorf("expected attempt=2, got %d", res.attempt)
+	}
+}
+
+// TestRunAndMeasure_partialBelowThresholdStaysRetry verifies that a partial at
+// an attempt count still below maxAttempts is reported as retry (not auto-DONE),
+// exercising the configurable threshold directly.
+func TestRunAndMeasure_partialBelowThresholdStaysRetry(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n"), 0o644)
+	srcDir := filepath.Join(dir, "pkg")
+	os.MkdirAll(srcDir, 0o755)
+	os.WriteFile(filepath.Join(srcDir, "foo.go"),
+		[]byte("package pkg\n\nfunc Foo(x int) int {\n\tif x > 0 {\n\t\treturn 1\n\t}\n\treturn 0\n}\n"), 0o644)
+	os.WriteFile(filepath.Join(srcDir, "foo_test.go"),
+		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\tif Foo(1) != 1 {\n\t\tt.Fatal(\"a\")\n\t}\n}\n"), 0o644)
+
+	orig, _ := os.Getwd()
+	defer os.Chdir(orig)
+	os.Chdir(dir)
+
+	// Attempt 1 -> attempt becomes 2; with maxAttempts=5 (2 < 5) -> outcomeRetry.
+	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Attempt: 1}
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")), 5)
+
+	if res.outcome != outcomeRetry {
+		t.Fatalf("expected outcomeRetry below threshold, got %v", res.outcome)
 	}
 	if res.attempt != 2 {
 		t.Errorf("expected attempt=2, got %d", res.attempt)
@@ -135,10 +164,10 @@ func TestRunAndMeasure_runnerError(t *testing.T) {
 	// extract test functions and returns an error -> outcomeTestFail with the
 	// error string as failOutput (covers the err != nil branch).
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3}
-	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "missing_test.go")))
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "missing_test.go")), 3)
 
 	if res.outcome != outcomeTestFail {
-		t.Fatalf("expected outcomeTestFail from runner error, got %v", res.outcome)
+		t.Fatalf("expected outcomeTestFail, got %v", res.outcome)
 	}
 	if res.failOutput == "" {
 		t.Error("expected non-empty failOutput from runner error")
@@ -168,7 +197,7 @@ func TestRunAndMeasure_checkError(t *testing.T) {
 	os.Chdir(dir)
 
 	fn := &model.Function{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3}
-	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")))
+	res := runAndMeasure(dir, "go", fn, mkMatch(filepath.Join("pkg", "foo_test.go")), 3)
 
 	if res.outcome != outcomeTestFail {
 		t.Fatalf("expected outcomeTestFail from checker error, got %v", res.outcome)

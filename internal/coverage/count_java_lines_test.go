@@ -4,10 +4,10 @@ import "testing"
 
 func TestCountJavaLines(t *testing.T) {
 	fileCov := &jacocoFile{Lines: []jacocoLine{
-		{Nr: 5, Ci: 4},          // covered
-		{Nr: 6, Mi: 3, Ci: 0},   // uncovered (instructions but none covered)
-		{Nr: 7},                 // no instructions -> ignored
-		{Nr: 99, Ci: 1},         // outside range -> ignored
+		{Nr: 5, Ci: 4},        // covered
+		{Nr: 6, Mi: 3, Ci: 0}, // uncovered (instructions but none covered)
+		{Nr: 7},               // no instructions -> ignored
+		{Nr: 99, Ci: 1},       // outside range -> ignored
 	}}
 	r := javaFuncRange{file: "Foo.java", startLine: 5, endLine: 10}
 	var fc FuncCoverage

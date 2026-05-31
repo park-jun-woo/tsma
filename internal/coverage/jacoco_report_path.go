@@ -8,6 +8,7 @@ import "path/filepath"
 // given build tool, joined under projectRoot:
 //   - maven:  target/site/jacoco/jacoco.xml
 //   - gradle: build/reports/jacoco/test/jacocoTestReport.xml
+//
 // An empty string is returned for an unknown build tool.
 func jacocoReportPath(projectRoot, buildTool string) string {
 	switch buildTool {

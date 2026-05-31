@@ -13,8 +13,8 @@ func TestSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 
 	sess := &model.Session{
-		Project: dir,
-		Lang:    "go",
+		Project:   dir,
+		Lang:      "go",
 		CheckedAt: time.Now(),
 		Functions: []model.Function{
 			{
