@@ -26,9 +26,12 @@ func TestLoadOrAnalyze_existingSession(t *testing.T) {
 	data, _ := json.MarshalIndent(sess, "", "  ")
 	os.WriteFile(filepath.Join(sessDir, "session.json"), data, 0o644)
 
-	loaded, err := loadOrAnalyze(dir)
+	loaded, fresh, err := loadOrAnalyze(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if fresh {
+		t.Error("expected fresh=false on existing-session load path")
 	}
 	if loaded.Lang != "go" {
 		t.Errorf("expected lang=go, got %s", loaded.Lang)
@@ -46,7 +49,7 @@ func TestLoadOrAnalyze_corruptSession(t *testing.T) {
 	// Invalid JSON: Exists is true but Load fails.
 	os.WriteFile(filepath.Join(sessDir, "session.json"), []byte("{broken"), 0o644)
 
-	_, err := loadOrAnalyze(dir)
+	_, _, err := loadOrAnalyze(dir)
 	if err == nil {
 		t.Fatal("expected error loading corrupt session")
 	}
@@ -65,7 +68,7 @@ func TestLoadOrAnalyze_saveError(t *testing.T) {
 	// Create .tsma as a regular file so MkdirAll inside Save fails.
 	os.WriteFile(filepath.Join(dir, ".tsma"), []byte("not a dir"), 0o644)
 
-	_, err := loadOrAnalyze(dir)
+	_, _, err := loadOrAnalyze(dir)
 	if err == nil {
 		t.Fatal("expected error when session cannot be saved")
 	}
@@ -75,7 +78,7 @@ func TestLoadOrAnalyze_noSession_emptyDir(t *testing.T) {
 	dir := t.TempDir()
 
 	// No session and no Go project -> should fail at analyzeProject
-	_, err := loadOrAnalyze(dir)
+	_, _, err := loadOrAnalyze(dir)
 	if err == nil {
 		t.Fatal("expected error for empty dir with no session")
 	}
@@ -88,12 +91,15 @@ func TestLoadOrAnalyze_noSession_goProject(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644)
 
-	sess, err := loadOrAnalyze(dir)
+	sess, fresh, err := loadOrAnalyze(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if sess == nil {
 		t.Fatal("expected non-nil session")
+	}
+	if !fresh {
+		t.Error("expected fresh=true on analyze path")
 	}
 	if sess.Lang != "go" {
 		t.Errorf("expected lang=go, got %s", sess.Lang)

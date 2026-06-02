@@ -20,12 +20,23 @@ import (
 // TODO. A package whose test run fails (e.g. compile error) is skipped: its
 // functions stay TODO and a failure is reported, without aborting the scan.
 func batchMeasureGo(root string, sess *model.Session) {
-	matcher := match.NewFuncMatcher(sess.Lang)
+	funcs := make([]*model.Function, len(sess.Functions))
+	for i := range sess.Functions {
+		funcs[i] = &sess.Functions[i]
+	}
+	batchMeasureGoFuncs(root, sess.Lang, funcs)
+}
+
+// batchMeasureGoFuncs is the core batch measurement over an explicit slice of
+// function pointers, so it can measure either the whole session (first scan) or
+// just the newly-reconciled subset (Phase012 rescan) without re-running tests
+// for already-measured functions.
+func batchMeasureGoFuncs(root, lang string, funcs []*model.Function) {
+	matcher := match.NewFuncMatcher(lang)
 	groups := map[string]*goPkgGroup{}
 	var order []string
 
-	for i := range sess.Functions {
-		fn := &sess.Functions[i]
+	for _, fn := range funcs {
 		m, found := matcher.MatchFunc(root, fn)
 		if !found || len(m.Files) == 0 {
 			continue // untested: no test attributed, stays TODO (not measured)

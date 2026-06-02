@@ -17,12 +17,22 @@ import (
 // measured TODO (Attempt=1), untested stays TODO. A function whose tests fail to
 // run is left TODO and reported, without aborting the scan.
 func batchMeasureOther(root string, sess *model.Session) {
-	matcher := match.NewFuncMatcher(sess.Lang)
-	checker := coverage.NewChecker(sess.Lang)
-	total := len(sess.Functions)
-
+	funcs := make([]*model.Function, len(sess.Functions))
 	for i := range sess.Functions {
-		fn := &sess.Functions[i]
+		funcs[i] = &sess.Functions[i]
+	}
+	batchMeasureOtherFuncs(root, sess.Lang, funcs)
+}
+
+// batchMeasureOtherFuncs is the core single-function-loop measurement over an
+// explicit slice, so it can measure the whole session or just the
+// newly-reconciled subset (Phase012 rescan).
+func batchMeasureOtherFuncs(root, lang string, funcs []*model.Function) {
+	matcher := match.NewFuncMatcher(lang)
+	checker := coverage.NewChecker(lang)
+	total := len(funcs)
+
+	for i, fn := range funcs {
 		m, found := matcher.MatchFunc(root, fn)
 		if !found || len(m.Files) == 0 {
 			continue // untested, stays TODO

@@ -50,14 +50,19 @@ func TestRunStatus_noSession(t *testing.T) {
 
 func TestRunStatus_withSession(t *testing.T) {
 	dir := t.TempDir()
+	// Real source so the on-load reconcile (Phase012) matches by QualifiedName
+	// ("pkg.<Name>") and preserves each function's status instead of dropping it.
+	writeGoFunc(t, dir, "A")
+	writeGoFunc(t, dir, "B")
+	writeGoFunc(t, dir, "C")
 
 	sess := &model.Session{
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "A", Status: model.StatusPass, CoveragePct: 100},
-			{Name: "B", Status: model.StatusDone, CoveragePct: 80},
-			{Name: "C", Status: model.StatusTodo},
+			{QualifiedName: "pkg.A", Name: "A", File: "pkg/a.go", Status: model.StatusPass, CoveragePct: 100},
+			{QualifiedName: "pkg.B", Name: "B", File: "pkg/b.go", Status: model.StatusDone, CoveragePct: 80},
+			{QualifiedName: "pkg.C", Name: "C", File: "pkg/c.go", Status: model.StatusTodo},
 		},
 		Summary: model.Summary{Total: 3, Pass: 1, Done: 1, Todo: 1},
 	}

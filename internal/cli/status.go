@@ -4,6 +4,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/park-jun-woo/tsma/internal/session"
 	"github.com/spf13/cobra"
@@ -28,6 +29,22 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	sess, err := session.Load(root)
 	if err != nil {
 		return fmt.Errorf("load session: %w", err)
+	}
+
+	// Reflect source changes so status never reports stale counts (BUG-004).
+	// Structure-only (measure=false): new functions surface as TODO without
+	// running tests; measurement is left to `tsma next`/`tsma rescan`. Always
+	// save: even with no add/remove, positional metadata and CheckedAt may have
+	// been refreshed.
+	added, removed, err := reconcileSession(root, sess, false)
+	if err != nil {
+		return err
+	}
+	if err := session.Save(root, sess); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+	if added > 0 || removed > 0 {
+		fmt.Fprintf(os.Stderr, "source changed: +%d new, -%d removed (run 'tsma next')\n", added, removed)
 	}
 
 	s := sess.Summary

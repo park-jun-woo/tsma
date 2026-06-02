@@ -1,6 +1,6 @@
 # tsma
 
-[![Version](https://img.shields.io/badge/version-v0.4.0-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
+[![Version](https://img.shields.io/badge/version-v0.4.1-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
 
@@ -48,6 +48,7 @@ Repeat until `All functions complete!`.
 tsma next              the entire workflow (detect → test → coverage → advance)
 tsma list [--page N]   all functions with status
 tsma status            progress summary
+tsma rescan            re-sync the function set with current source (keeps progress)
 tsma reset --all       delete session
 ```
 
@@ -108,7 +109,7 @@ ListContracts  testing...
 ## Principles
 
 1. **Convention-based test matching.** Go: `handler.go` → `handler_test.go` in the same directory. TS: `.test.ts` / `.spec.ts`. Python: `test_` prefix. Rust: in-file `#[cfg(test)] mod tests` or `tests/*.rs`. Java: `src/main/java/…/Foo.java` → `src/test/java/…/FooTest.java`. C#: `Foo.cs` → `FooTests.cs` / `FooTest.cs` (incl. `*.Tests/` projects).
-2. **Session is cache, source files are truth.** If a test file is deleted, the function reverts to TODO regardless of what session.json says.
+2. **Session is cache, source files are truth.** Every `tsma next` (and `tsma status`) re-scans the source and reconciles the function set: functions added or extracted since the last index surface as TODO, deleted functions are dropped, and existing progress is preserved. So a refactor that adds functions can never leave a stale "All functions complete!" — and if a test file is deleted, the function reverts to TODO regardless of what session.json says. Use `tsma rescan` to force this sync without touching progress (unlike `tsma reset --all`).
 3. **Generated code is excluded.** `*_gen.go`, `*.pb.go` are not indexed.
 4. **`.tsmignore` for custom exclusions.** Place a `.tsmignore` file in the project root to exclude paths from indexing. Same syntax as `.gitignore`.
 5. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after one retry.

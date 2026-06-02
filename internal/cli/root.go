@@ -37,6 +37,7 @@ func init() {
 	rootCmd.AddCommand(nextCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(rescanCmd)
 	rootCmd.AddCommand(resetCmd)
 	rootCmd.AddCommand(versionCmd)
 }

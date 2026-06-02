@@ -4,7 +4,7 @@ description: Test coverage ratchet for Go, TypeScript, Python, Rust, Java, and C
 license: MIT
 metadata:
   author: park-jun-woo
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # tsma — Test Coverage Ratchet for LLM Agents
@@ -53,6 +53,7 @@ Repeat until `All functions complete!`.
 | `tsma next` | Full workflow: detect → test → coverage → advance |
 | `tsma list [--page N]` | All functions with status |
 | `tsma status` | Progress summary |
+| `tsma rescan` | Re-sync the function set with current source (keeps progress; no reset) |
 | `tsma reset --all` | Delete session |
 
 ## Status Types

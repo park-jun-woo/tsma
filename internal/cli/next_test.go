@@ -43,12 +43,13 @@ func loadSessionForTest(t *testing.T, dir string) *model.Session {
 
 func TestRunNext_allComplete(t *testing.T) {
 	dir := t.TempDir()
+	writeGoFunc(t, dir, "A")
 
 	sess := &model.Session{
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "A", Status: model.StatusPass, CoveragePct: 100},
+			{QualifiedName: "pkg.A", Name: "A", File: "pkg/a.go", Status: model.StatusPass, CoveragePct: 100},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Pass: 1},
@@ -132,6 +133,22 @@ func writeGoModule(t *testing.T, dir string) string {
 	return filepath.Join("pkg", "foo_test.go")
 }
 
+// writeGoFunc writes a minimal compilable Go source file (no test) with a single
+// empty-bodied function so the indexer/reconciler finds it. Used to make
+// synthetic session fixtures match real source: the indexer derives
+// QualifiedName "pkg.<Name>" for a file under pkg/, so fixtures must use that key
+// or the on-load reconcile (Phase012) would drop them as "removed".
+func writeGoFunc(t *testing.T, dir, name string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
+		os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.22\n"), 0o644)
+	}
+	srcDir := filepath.Join(dir, "pkg")
+	os.MkdirAll(srcDir, 0o755)
+	os.WriteFile(filepath.Join(srcDir, strings.ToLower(name)+".go"),
+		[]byte("package pkg\n\nfunc "+name+"() {}\n"), 0o644)
+}
+
 func writeSession(t *testing.T, dir string, sess *model.Session) {
 	t.Helper()
 	sessDir := filepath.Join(dir, ".tsma")
@@ -151,7 +168,7 @@ func TestRunNext_unchangedTestFile(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, TestMtime: mtime},
 		},
 		CurrentIndex: 0,
@@ -182,7 +199,7 @@ func TestRunNext_passOutcome(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
@@ -226,7 +243,7 @@ func TestRunNext_testFailOutcome(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -265,7 +282,7 @@ func TestRunNext_retryThenDone(t *testing.T) {
 		Lang:        "go",
 		MaxAttempts: 2,
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -322,13 +339,14 @@ func makeSaveFail(t *testing.T, dir string) {
 func TestRunNext_passThenNextTodo(t *testing.T) {
 	dir := t.TempDir()
 	writeGoModule(t, dir)
+	writeGoFunc(t, dir, "Bar")
 
 	sess := &model.Session{
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
-			{Name: "Bar", File: "pkg/bar.go", StartLine: 1, EndLine: 2, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Bar", Name: "Bar", File: "pkg/bar.go", StartLine: 1, EndLine: 2, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 2, Todo: 2},
@@ -366,6 +384,8 @@ func TestRunNext_doneThenNextTodo(t *testing.T) {
 	os.WriteFile(filepath.Join(srcDir, "foo_test.go"),
 		[]byte("package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) {\n\tif Foo(1) != 1 {\n\t\tt.Fatal(\"a\")\n\t}\n}\n"), 0o644)
 
+	writeGoFunc(t, dir, "Bar")
+
 	// Foo already on attempt 1 so this measurement triggers DONE (MaxAttempts 2),
 	// and Bar remains TODO so advanceToNext returns non-nil.
 	sess := &model.Session{
@@ -373,8 +393,8 @@ func TestRunNext_doneThenNextTodo(t *testing.T) {
 		Lang:        "go",
 		MaxAttempts: 2,
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo, Attempt: 1},
-			{Name: "Bar", File: "pkg/bar.go", StartLine: 1, EndLine: 2, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo, Attempt: 1},
+			{QualifiedName: "pkg.Bar", Name: "Bar", File: "pkg/bar.go", StartLine: 1, EndLine: 2, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 2, Todo: 2},
@@ -402,11 +422,12 @@ func TestRunNext_doneThenNextTodo(t *testing.T) {
 // all functions are already complete.
 func TestRunNext_allCompleteSaveError(t *testing.T) {
 	dir := t.TempDir()
+	writeGoFunc(t, dir, "A")
 	sess := &model.Session{
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "A", Status: model.StatusPass, CoveragePct: 100},
+			{QualifiedName: "pkg.A", Name: "A", File: "pkg/a.go", Status: model.StatusPass, CoveragePct: 100},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Pass: 1},
@@ -437,7 +458,7 @@ func TestRunNext_noTestFileSaveError(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 2, EndLine: 2, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 2, EndLine: 2, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -467,7 +488,7 @@ func TestRunNext_unchangedSaveError(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, TestMtime: mtime},
 		},
 		CurrentIndex: 0,
@@ -497,7 +518,7 @@ func TestRunNext_finalSaveError(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 8, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -536,7 +557,7 @@ func TestRunNext_misnamedTestFile(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 3, EndLine: 3, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -576,7 +597,7 @@ func TestRunNext_todoNoTestFile(t *testing.T) {
 		Project: dir,
 		Lang:    "go",
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 2, EndLine: 2, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 2, EndLine: 2, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},

@@ -38,10 +38,10 @@ func TestInteractive_unchangedPartialDoesNotTrapCursor(t *testing.T) {
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
 		Functions: []model.Function{
-			{Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "a.Partial", Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, CoveragePct: 50, Attempt: 1,
 				TestMtime: partialMtime, TestFiles: []string{"a/partial_test.go"}},
-			{Name: "Untested", File: "b/untested.go", StartLine: 3, EndLine: 3,
+			{QualifiedName: "b.Untested", Name: "Untested", File: "b/untested.go", StartLine: 3, EndLine: 3,
 				Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
@@ -105,7 +105,7 @@ func TestInteractive_changedPartialRemeasuredToPass(t *testing.T) {
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
 		Functions: []model.Function{
-			{Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "a.Partial", Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, CoveragePct: 50, Attempt: 1,
 				TestMtime: "stale", TestFiles: []string{"a/partial_test.go"}},
 		},
@@ -154,7 +154,7 @@ func TestInteractive_untestedWithMisnamedTestPrintsRename(t *testing.T) {
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
 		Functions: []model.Function{
-			{Name: "Thing", File: "a/thing.go", StartLine: 3, EndLine: 3, Status: model.StatusTodo},
+			{QualifiedName: "a.Thing", Name: "Thing", File: "a/thing.go", StartLine: 3, EndLine: 3, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -201,7 +201,7 @@ func TestInteractive_testFailKeepsTodo(t *testing.T) {
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
 		Functions: []model.Function{
-			{Name: "Buggy", File: "a/buggy.go", StartLine: 3, EndLine: 3,
+			{QualifiedName: "a.Buggy", Name: "Buggy", File: "a/buggy.go", StartLine: 3, EndLine: 3,
 				Status: model.StatusTodo, TestMtime: "stale",
 				TestFiles: []string{"a/buggy_test.go"}},
 		},
@@ -265,10 +265,10 @@ func TestInteractive_changedPartialSecondAttemptBecomesDone(t *testing.T) {
 		FirstPassDone: true,
 		MaxAttempts:   2,
 		Functions: []model.Function{
-			{Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "a.Partial", Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, CoveragePct: 50, Attempt: 1,
 				TestMtime: "stale", TestFiles: []string{"a/partial_test.go"}},
-			{Name: "Ok", File: "b/ok.go", StartLine: 3, EndLine: 3,
+			{QualifiedName: "b.Ok", Name: "Ok", File: "b/ok.go", StartLine: 3, EndLine: 3,
 				Status: model.StatusPass, CoveragePct: 100},
 		},
 		CurrentIndex: 0,
@@ -321,7 +321,7 @@ func TestInteractive_changedPartialStaysPartial(t *testing.T) {
 		FirstPassDone: true,
 		Functions: []model.Function{
 			// Attempt 0 -> attempt+1==1 (<2) -> outcomeRetry.
-			{Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
+			{QualifiedName: "a.Partial", Name: "Partial", File: "a/partial.go", StartLine: 3, EndLine: 8,
 				Status: model.StatusTodo, CoveragePct: 50, Attempt: 0,
 				TestMtime: "stale", TestFiles: []string{"a/partial_test.go"}},
 		},
@@ -367,7 +367,7 @@ func TestInteractive_noProgressPrintsSummary(t *testing.T) {
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
 		Functions: []model.Function{
-			{Name: "Foo", File: "pkg/foo.go", StartLine: 2, EndLine: 2, Status: model.StatusTodo},
+			{QualifiedName: "pkg.Foo", Name: "Foo", File: "pkg/foo.go", StartLine: 2, EndLine: 2, Status: model.StatusTodo},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Todo: 1},
@@ -392,11 +392,12 @@ func TestInteractive_noProgressPrintsSummary(t *testing.T) {
 // mode.
 func TestInteractive_allComplete(t *testing.T) {
 	dir := t.TempDir()
+	writeGoFunc(t, dir, "A")
 	sess := &model.Session{
 		Project: dir, Lang: "go",
 		FirstPassDone: true,
 		Functions: []model.Function{
-			{Name: "A", Status: model.StatusPass, CoveragePct: 100},
+			{QualifiedName: "pkg.A", Name: "A", File: "pkg/a.go", Status: model.StatusPass, CoveragePct: 100},
 		},
 		CurrentIndex: 0,
 		Summary:      model.Summary{Total: 1, Pass: 1},

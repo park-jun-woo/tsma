@@ -3,6 +3,9 @@
 package cli
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,18 +32,31 @@ func runNext(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sess, err := loadOrAnalyze(root)
+	sess, fresh, err := loadOrAnalyze(root)
 	if err != nil {
 		return err
+	}
+
+	// A loaded session may be stale: functions added/extracted/removed since the
+	// last index are invisible until reconciled, which is how a fully-PASS stale
+	// session falsely reported "All functions complete!" (BUG-004). Re-scan the
+	// source and merge the current function set, preserving progress. A
+	// freshly-analyzed session already reflects current source, so skip it there.
+	if !fresh {
+		added, removed, rErr := reconcileSession(root, sess, true)
+		if rErr != nil {
+			return rErr
+		}
+		if added > 0 || removed > 0 {
+			fmt.Fprintf(os.Stderr, "Source changed: +%d new, -%d removed\n", added, removed)
+		}
 	}
 
 	if err := resolveMaxAttempts(cmd, sess); err != nil {
 		return err
 	}
 
-	// The first scan batch-measures every function during analysis (and sets
-	// FirstPassDone), so the session is always fully measured here. `tsma next`
-	// is therefore purely the interactive rotating cursor over the remaining
-	// TODOs — there is no incremental first-pass step anymore.
+	// After analysis/reconcile the session is fully measured, so `tsma next` is
+	// the interactive rotating cursor over the remaining TODOs.
 	return runNextInteractive(root, sess)
 }
