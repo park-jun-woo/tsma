@@ -15,7 +15,7 @@ func TestCanonicalTestPath(t *testing.T) {
 		{"go", filepath.Join("pkg", "foo.go"), filepath.Join("pkg", "foo_test.go")},
 		{"go", "main.go", "main_test.go"},
 		{"go", "notgo.txt", ""}, // not a .go source
-		{"python", filepath.Join("a", "b.py"), ""}, // non-Go lang in Phase 002
+		{"rust", filepath.Join("a", "b.rs"), ""}, // still-unhandled language returns ""
 	}
 	for _, c := range cases {
 		if got := CanonicalTestPath(c.lang, c.src); got != c.want {

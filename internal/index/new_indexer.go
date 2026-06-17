@@ -10,7 +10,7 @@ func NewIndexer(lang string) Indexer {
 	case "typescript":
 		return newTSTreeSitterIndexer()
 	case "python":
-		return &PyIndexer{}
+		return newPyAstIndexer()
 	case "rust":
 		return &RsIndexer{}
 	case "java":

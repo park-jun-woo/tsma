@@ -19,9 +19,11 @@ func TestNewIndexerReturnsTSIndexer(t *testing.T) {
 }
 
 func TestNewIndexerReturnsPyIndexer(t *testing.T) {
+	// Phase005b: the python factory entry returns the ast precise indexer
+	// (PyIndexer is retained as its line-based fallback, asserted in index_test.go).
 	idx := NewIndexer("python")
-	if _, ok := idx.(*PyIndexer); !ok {
-		t.Errorf("NewIndexer(\"python\") returned %T, want *PyIndexer", idx)
+	if _, ok := idx.(*PyAstIndexer); !ok {
+		t.Errorf("NewIndexer(\"python\") returned %T, want *PyAstIndexer", idx)
 	}
 }
 

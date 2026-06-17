@@ -22,7 +22,7 @@ func TestCanonicalTestPathTypescript(t *testing.T) {
 		}
 	}
 	// Non-handled language still returns "".
-	if got := CanonicalTestPath("python", "x.py"); got != "" {
-		t.Errorf("python should be unhandled, got %q", got)
+	if got := CanonicalTestPath("rust", "x.rs"); got != "" {
+		t.Errorf("rust should be unhandled, got %q", got)
 	}
 }

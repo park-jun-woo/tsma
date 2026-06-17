@@ -48,9 +48,10 @@ func TestNewIndexerTypescript(t *testing.T) {
 }
 
 func TestNewIndexerPython(t *testing.T) {
+	// Phase005b: factory returns the ast precise indexer; PyIndexer is its fallback.
 	idx := NewIndexer("python")
-	if _, ok := idx.(*PyIndexer); !ok {
-		t.Errorf("NewIndexer(\"python\") returned %T, want *PyIndexer", idx)
+	if _, ok := idx.(*PyAstIndexer); !ok {
+		t.Errorf("NewIndexer(\"python\") returned %T, want *PyAstIndexer", idx)
 	}
 }
 

@@ -12,6 +12,8 @@ func NewFuncMatcher(lang string) FuncMatcher {
 		return &GoFuncMatcher{}
 	case "typescript":
 		return &TypeScriptFuncMatcher{}
+	case "python":
+		return &PythonFuncMatcher{}
 	default:
 		return &fallbackFuncMatcher{inner: NewMatcher(lang)}
 	}
