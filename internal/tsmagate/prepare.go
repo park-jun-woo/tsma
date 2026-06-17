@@ -47,6 +47,17 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	}
 	m.TestFiles = tm.Files
 
+	// Statically scan the matched test files for escape-hatch smells (Go only:
+	// go/ast precision). This is independent of run/measure — smells are a test
+	// property, not a runtime one — so it happens as soon as tm.Files is known,
+	// before the runner. tm.Files are root-relative, so join with p.Root. Parse
+	// errors are ignored: a broken test file is judged by tests-must-pass, not
+	// here. Findings drive the LevelReview TS-REFL-* rules (surfaced only when no
+	// Fail rule fires, i.e. tests pass at 100% branch coverage).
+	if p.Lang == "go" {
+		m.Smells = scanGoSmells(p.Root, tm.Files)
+	}
+
 	// Run the matched tests. A run error or a non-pass result is TEST_FAIL: a
 	// broken build is never judged on coverage (rulebook G-001).
 	res, err := runner.NewRunner(p.Lang).Run(p.Root, tm)

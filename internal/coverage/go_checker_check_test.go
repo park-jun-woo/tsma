@@ -6,8 +6,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
 )
+
+// TestGoCheckerCheck_emptyMatch covers the len(m.Files)==0 guard (line 21): an
+// empty match has no test files to run, so Check errors before resolving paths.
+func TestGoCheckerCheck_emptyMatch(t *testing.T) {
+	checker := &GoChecker{}
+	if _, err := checker.Check("/proj", match.TestMatch{}, nil); err == nil {
+		t.Fatal("expected error for an empty match (no test files)")
+	}
+}
 
 func TestGoCheckerCheck_InvalidProject(t *testing.T) {
 	checker := &GoChecker{}

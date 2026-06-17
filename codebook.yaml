@@ -10,6 +10,8 @@ required:
     model: "core data structures"
     index: "function indexing from source code"
     match: "function-test file matching by convention"
+    smell: "test-smell detection: reflection/unsafe escape-hatch in tests"
+    gate: "reins gate.Definition glue: seed/render/prepare/rules"
   type:
     command: "cobra CLI command entrypoint"
     implementation: "language-specific feature implementation"

@@ -42,18 +42,9 @@ func (d *Definition) Seed(args []string) ([]*quest.Item, error) {
 
 	items := make([]*quest.Item, 0, len(fns))
 	for i := range fns {
-		fn := fns[i]
-		// Strip the runtime fields reins now owns so the payload is pure
-		// location data; State/Tries are the ratchet's, not the payload's.
-		fn.Status = ""
-		fn.Attempt = 0
-		fn.CoveragePct = 0
-		fn.TestMtime = ""
-		fn.FailOutput = ""
-
-		it := &quest.Item{Key: fn.QualifiedName, State: quest.TODO}
-		if err := it.SetPayload(funcPayload{Lang: lang, Root: root, Fn: fn}); err != nil {
-			return nil, fmt.Errorf("snapshot payload for %s: %w", fn.QualifiedName, err)
+		it, err := buildItem(lang, root, fns[i])
+		if err != nil {
+			return nil, err
 		}
 		items = append(items, it)
 	}

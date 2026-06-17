@@ -51,3 +51,30 @@ func TestResolveTestFuncs_missingFileError(t *testing.T) {
 		t.Error("expected error for missing file")
 	}
 }
+
+// TestResolveTestFuncs_absError covers the filepath.Abs error branch (line 24):
+// Abs fails only when os.Getwd() fails, forced by removing the cwd, with a
+// relative match file so Abs must consult the missing cwd.
+func TestResolveTestFuncs_absError(t *testing.T) {
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	defer os.Chdir(orig)
+
+	dir := t.TempDir()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	if err := os.Remove(dir); err != nil {
+		t.Skipf("could not remove cwd: %v", err)
+	}
+	if _, gErr := os.Getwd(); gErr == nil {
+		t.Skip("os.Getwd did not fail after removing cwd on this platform")
+	}
+
+	m := match.TestMatch{Files: []string{"rel_test.go"}, TestFuncs: nil}
+	if _, err := ResolveTestFuncs(m); err == nil {
+		t.Fatal("expected error when filepath.Abs fails")
+	}
+}

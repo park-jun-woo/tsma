@@ -5,7 +5,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/park-jun-woo/tsma/internal/match"
 )
+
+// TestGoRunnerRun_emptyMatch covers the len(m.Files)==0 guard (line 19): an
+// empty match has no test files, so Run errors before resolving any path.
+func TestGoRunnerRun_emptyMatch(t *testing.T) {
+	r := &GoRunner{}
+	if _, err := r.Run("/proj", match.TestMatch{}); err == nil {
+		t.Fatal("expected error for an empty match (no test files)")
+	}
+}
 
 func TestGoRunnerRunNonexistentTestFile(t *testing.T) {
 	r := &GoRunner{}

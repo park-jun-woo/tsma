@@ -4,6 +4,7 @@ package coverage
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/park-jun-woo/tsma/internal/model"
@@ -81,5 +82,49 @@ func TestCheckPkg_CompileFailureReturnsError(t *testing.T) {
 	c := &GoChecker{}
 	if _, err := c.CheckPkg(root, root, []*model.Function{broken}, []string{"TestBroken"}); err == nil {
 		t.Fatal("expected error from compile-failing package")
+	}
+}
+
+// TestCheckPkg_parseProfileError covers the parse-profile error branch (line
+// 55): `go test` exits 0 but writes an unparseable coverprofile. A fake `go` on
+// PATH emits a single >64KB line so parseCoverProfile's scanner errors.
+func TestCheckPkg_parseProfileError(t *testing.T) {
+	root := t.TempDir()
+	write := func(name, body string) {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("go.mod", "module checkpkgparse\n\ngo 1.22\n")
+	write("foo.go", "package mathx\n\nfunc Foo() int { return 1 }\n")
+	write("foo_test.go", "package mathx\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) { _ = Foo() }\n")
+
+	// Fake `go`: exit 0 but write a >64KB single line (no newline) to the path
+	// given via -coverprofile=..., overflowing bufio.Scanner's token limit.
+	binDir := t.TempDir()
+	script := `#!/bin/sh
+for a in "$@"; do
+  case "$a" in
+    -coverprofile=*) out="${a#-coverprofile=}" ;;
+  esac
+done
+if [ -n "$out" ]; then
+  awk 'BEGIN{ for(i=0;i<100000;i++) printf "a" }' > "$out"
+fi
+exit 0
+`
+	if err := os.WriteFile(filepath.Join(binDir, "go"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	foo := &model.Function{Name: "Foo", File: "foo.go", StartLine: 3, EndLine: 3}
+	c := &GoChecker{}
+	_, err := c.CheckPkg(root, root, []*model.Function{foo}, []string{"TestFoo"})
+	if err == nil {
+		t.Fatal("expected error when the coverage profile is unparseable")
+	}
+	if !strings.Contains(err.Error(), "parse coverage profile") {
+		t.Errorf("expected 'parse coverage profile', got: %v", err)
 	}
 }

@@ -70,3 +70,52 @@ func TestFallbackFuncMatcherNilFunc(t *testing.T) {
 		t.Fatal("expected nil function to be unmatched")
 	}
 }
+
+// TestFallbackFuncMatcherDirectWrapsMatch covers the inner-match success path
+// (lines 17,21) by constructing the fallbackFuncMatcher directly (unambiguous
+// receiver) so the wrapped legacy match is exercised end to end.
+func TestFallbackFuncMatcherDirectWrapsMatch(t *testing.T) {
+	root := t.TempDir()
+	srcRel := filepath.Join("app", "service.py")
+	testRel := filepath.Join("app", "test_service.py")
+	if err := os.MkdirAll(filepath.Join(root, "app"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, srcRel), []byte("# src\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, testRel), []byte("# test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	fm := &fallbackFuncMatcher{inner: &PyMatcher{}}
+	tm, ok := fm.MatchFunc(root, &model.Function{Name: "do_work", File: srcRel})
+	if !ok {
+		t.Fatal("expected the wrapped matcher to find the test")
+	}
+	if len(tm.Files) != 1 {
+		t.Fatalf("Files = %v, want one matched test file", tm.Files)
+	}
+	if tm.TestFuncs != nil {
+		t.Fatalf("TestFuncs = %v, want nil (runner resolves from file)", tm.TestFuncs)
+	}
+}
+
+// TestFallbackFuncMatcherDirectNotFound covers the inner-match miss path (line
+// 18) via a direct construction: no test on disk, so the wrapped matcher returns
+// not-ok and MatchFunc reports an empty, unmatched result.
+func TestFallbackFuncMatcherDirectNotFound(t *testing.T) {
+	root := t.TempDir()
+	srcRel := filepath.Join("app", "service.py")
+	if err := os.MkdirAll(filepath.Join(root, "app"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, srcRel), []byte("# src\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	fm := &fallbackFuncMatcher{inner: &PyMatcher{}}
+	if _, ok := fm.MatchFunc(root, &model.Function{Name: "do_work", File: srcRel}); ok {
+		t.Fatal("expected unmatched result when no test file exists")
+	}
+}
