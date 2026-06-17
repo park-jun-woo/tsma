@@ -1,5 +1,5 @@
-//ff:func feature=match type=helper control=sequence lang=go
-//ff:what Derives the canonical <base>_test.go path (same directory) for a source file — the single source of truth for the test-naming formula reused by GoMatcher.Match, FindMisnamedTest, and the loop's write path.
+//ff:func feature=match type=helper control=selection
+//ff:what Derives the canonical sibling test path (same directory) for a source file — the single source of truth for the test-naming formula reused by GoMatcher.Match, FindMisnamedTest, and the loop's write path. Go: <base>_test.go. TypeScript (Phase005a): <base>.test.<ext> (jest/vitest). Non-handled languages return "".
 package match
 
 import (
@@ -19,13 +19,17 @@ import (
 // build on it, and the loop write path (Phase 002) uses it to place a brand-new
 // test file. Only Go is handled in Phase 002; other languages return "".
 func CanonicalTestPath(lang, sourceFile string) string {
-	if lang != "go" {
-		return ""
-	}
 	base := filepath.Base(sourceFile)
-	if !strings.HasSuffix(base, ".go") {
+	switch lang {
+	case "go":
+		if !strings.HasSuffix(base, ".go") {
+			return ""
+		}
+		testBase := strings.TrimSuffix(base, ".go") + "_test.go"
+		return filepath.Join(filepath.Dir(sourceFile), testBase)
+	case "typescript":
+		return canonicalTSTestPath(sourceFile, base)
+	default:
 		return ""
 	}
-	testBase := strings.TrimSuffix(base, ".go") + "_test.go"
-	return filepath.Join(filepath.Dir(sourceFile), testBase)
 }

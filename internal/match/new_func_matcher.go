@@ -3,13 +3,15 @@
 package match
 
 // NewFuncMatcher returns the appropriate FuncMatcher for the given language. Go
-// gets the content-aware GoFuncMatcher; every other language (and the default)
-// gets a fallback adapter that wraps the legacy file-name based Matcher,
-// preserving existing behavior.
+// and TypeScript get content-aware matchers; every other language (and the
+// default) gets a fallback adapter that wraps the legacy file-name based
+// Matcher, preserving existing behavior.
 func NewFuncMatcher(lang string) FuncMatcher {
 	switch lang {
 	case "go":
 		return &GoFuncMatcher{}
+	case "typescript":
+		return &TypeScriptFuncMatcher{}
 	default:
 		return &fallbackFuncMatcher{inner: NewMatcher(lang)}
 	}

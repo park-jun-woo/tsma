@@ -66,9 +66,11 @@ func TestRules_PartialCoverageWithSmell_Fail(t *testing.T) {
 }
 
 func TestRules_Catalog_FiveRules(t *testing.T) {
+	// Phase005a D4 adds the three TS smell rules (LevelReview): 2 Fail (G-001,
+	// G-002/G-004) + 3 Go-reflect Review + 3 TS-reflect Review = 8.
 	rules := New().Rules()
-	if len(rules) != 5 {
-		t.Fatalf("len(Rules) = %d, want 5", len(rules))
+	if len(rules) != 8 {
+		t.Fatalf("len(Rules) = %d, want 8", len(rules))
 	}
 	var fail, review int
 	for _, r := range rules {
@@ -79,7 +81,7 @@ func TestRules_Catalog_FiveRules(t *testing.T) {
 			review++
 		}
 	}
-	if fail != 2 || review != 3 {
-		t.Fatalf("levels: fail=%d review=%d, want fail=2 review=3", fail, review)
+	if fail != 2 || review != 6 {
+		t.Fatalf("levels: fail=%d review=%d, want fail=2 review=6", fail, review)
 	}
 }

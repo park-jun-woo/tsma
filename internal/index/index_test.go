@@ -35,9 +35,15 @@ func TestNewIndexerGo(t *testing.T) {
 }
 
 func TestNewIndexerTypescript(t *testing.T) {
+	// Phase005a: typescript now resolves to the tree-sitter precise path, which
+	// wraps the line-based *TSIndexer as its graceful fallback.
 	idx := NewIndexer("typescript")
-	if _, ok := idx.(*TSIndexer); !ok {
-		t.Errorf("NewIndexer(\"typescript\") returned %T, want *TSIndexer", idx)
+	ts, ok := idx.(*TreeSitterIndexer)
+	if !ok {
+		t.Fatalf("NewIndexer(\"typescript\") returned %T, want *TreeSitterIndexer", idx)
+	}
+	if _, ok := ts.fallback.(*TSIndexer); !ok {
+		t.Errorf("TreeSitterIndexer.fallback = %T, want *TSIndexer", ts.fallback)
 	}
 }
 

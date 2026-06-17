@@ -10,12 +10,19 @@ func TestNewFuncMatcherGo(t *testing.T) {
 	}
 }
 
-// TestNewFuncMatcherNonGoFallback verifies that every non-Go language returns a
-// fallback adapter wrapping the language's legacy Matcher.
+// TestNewFuncMatcherTypescript verifies TypeScript returns the content-aware
+// TypeScriptFuncMatcher (Phase005a D2).
+func TestNewFuncMatcherTypescript(t *testing.T) {
+	if _, ok := NewFuncMatcher("typescript").(*TypeScriptFuncMatcher); !ok {
+		t.Fatalf("NewFuncMatcher(typescript) = %T, want *TypeScriptFuncMatcher", NewFuncMatcher("typescript"))
+	}
+}
+
+// TestNewFuncMatcherNonGoFallback verifies that every remaining non-content
+// language returns a fallback adapter wrapping the language's legacy Matcher.
 func TestNewFuncMatcherNonGoFallback(t *testing.T) {
 	cases := map[string]Matcher{
-		"typescript": &TSMatcher{},
-		"python":     &PyMatcher{},
+		"python": &PyMatcher{},
 		"rust":       &RsMatcher{},
 		"java":       &JavaMatcher{},
 		"csharp":     &CsMatcher{},

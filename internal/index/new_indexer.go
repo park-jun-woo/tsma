@@ -8,7 +8,7 @@ func NewIndexer(lang string) Indexer {
 	case "go":
 		return &GoIndexer{}
 	case "typescript":
-		return &TSIndexer{}
+		return newTSTreeSitterIndexer()
 	case "python":
 		return &PyIndexer{}
 	case "rust":

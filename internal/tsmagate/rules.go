@@ -31,5 +31,8 @@ func (d *Definition) Rules() []gate.Rule {
 		unsafeInTest,
 		reflectDynamicInTest,
 		linknameInTest,
+		tsAsAnyInTest,
+		tsReflectInTest,
+		tsOwnPropertyInTest,
 	}
 }

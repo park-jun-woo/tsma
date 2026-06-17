@@ -10,9 +10,11 @@ func TestNewIndexerReturnsGoIndexer(t *testing.T) {
 }
 
 func TestNewIndexerReturnsTSIndexer(t *testing.T) {
+	// Phase005a: the typescript factory entry returns the tree-sitter precise
+	// indexer (TSIndexer is retained as its fallback, asserted in index_test.go).
 	idx := NewIndexer("typescript")
-	if _, ok := idx.(*TSIndexer); !ok {
-		t.Errorf("NewIndexer(\"typescript\") returned %T, want *TSIndexer", idx)
+	if _, ok := idx.(*TreeSitterIndexer); !ok {
+		t.Errorf("NewIndexer(\"typescript\") returned %T, want *TreeSitterIndexer", idx)
 	}
 }
 

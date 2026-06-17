@@ -33,13 +33,16 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	}
 	fn := p.Fn
 
-	// Go loop mode (C2): measure the generated test non-invasively via
-	// `go test -overlay` — the test never touches the source tree, so a broken
-	// generation cannot contaminate sibling functions and a brand-new test still
-	// attributes (the disk re-match is bypassed). This whole branch returns before
-	// the disk-truth path below; only Go is supported (non-Go overlay is Phase 004).
-	if isLoopMode(s) && p.Lang == "go" {
-		return gate.Context{Item: it, Submission: prepareLoopGo(it, p, raw)}, nil, nil
+	// Native loop mode: measure the generated test non-invasively via the
+	// language's own isolation — Go through `go test -overlay`, TypeScript through
+	// the .tsma/test scratch with rewritten imports. The source tree is never
+	// touched, so a broken generation cannot contaminate siblings and a brand-new
+	// test still attributes (the disk re-match is bypassed). This returns before
+	// the disk-truth path below; languages without a native path fall through.
+	if isLoopMode(s) {
+		if lm, ok := prepareLoopNative(it, p, raw); ok {
+			return gate.Context{Item: it, Submission: lm}, nil, nil
+		}
 	}
 
 	m := &measurement{FuncName: fn.QualifiedName}
@@ -82,16 +85,15 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	}
 	m.TestFiles = tm.Files
 
-	// Statically scan the matched test files for escape-hatch smells (Go only:
-	// go/ast precision). This is independent of run/measure — smells are a test
-	// property, not a runtime one — so it happens as soon as tm.Files is known,
-	// before the runner. tm.Files are root-relative, so join with p.Root. Parse
-	// errors are ignored: a broken test file is judged by tests-must-pass, not
-	// here. Findings drive the LevelReview TS-REFL-* rules (surfaced only when no
-	// Fail rule fires, i.e. tests pass at 100% branch coverage).
-	if p.Lang == "go" {
-		m.Smells = scanGoSmells(p.Root, tm.Files)
-	}
+	// Statically scan the matched test files for escape-hatch smells (Go via
+	// go/ast, TypeScript via tree-sitter — both node-based for precision). This
+	// is independent of run/measure — smells are a test property, not a runtime
+	// one — so it happens as soon as tm.Files is known, before the runner.
+	// tm.Files are root-relative, so join with p.Root. Parse errors are ignored:
+	// a broken test file is judged by tests-must-pass, not here. Findings drive
+	// the LevelReview TS-REFL-* rules (surfaced only when no Fail rule fires,
+	// i.e. tests pass at 100% branch coverage).
+	m.Smells = scanSmells(p.Lang, p.Root, tm.Files)
 
 	// Run the matched tests. A run error or a non-pass result is TEST_FAIL: a
 	// broken build is never judged on coverage (rulebook G-001).
