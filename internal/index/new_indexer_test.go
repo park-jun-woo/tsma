@@ -45,9 +45,12 @@ func TestNewIndexerReturnsJavaIndexer(t *testing.T) {
 }
 
 func TestNewIndexerReturnsCsIndexer(t *testing.T) {
+	// Phase005d: the csharp factory entry returns the tree-sitter precise indexer
+	// (CsIndexer is retained as its line-based fallback, asserted in
+	// cs_fallback_test.go).
 	idx := NewIndexer("csharp")
-	if _, ok := idx.(*CsIndexer); !ok {
-		t.Errorf("NewIndexer(\"csharp\") returned %T, want *CsIndexer", idx)
+	if _, ok := idx.(*TreeSitterIndexer); !ok {
+		t.Errorf("NewIndexer(\"csharp\") returned %T, want *TreeSitterIndexer", idx)
 	}
 }
 

@@ -1,5 +1,5 @@
 //ff:func feature=match type=factory control=selection
-//ff:what Returns the appropriate FuncMatcher for a language (Go/TypeScript/Python/Java content-aware, others fallback)
+//ff:what Returns the appropriate FuncMatcher for a language (Go/TypeScript/Python/Java/C# content-aware, others fallback)
 package match
 
 // NewFuncMatcher returns the appropriate FuncMatcher for the given language. Go
@@ -16,6 +16,8 @@ func NewFuncMatcher(lang string) FuncMatcher {
 		return &PythonFuncMatcher{}
 	case "java":
 		return &JavaFuncMatcher{}
+	case "csharp":
+		return &CsFuncMatcher{}
 	default:
 		return &fallbackFuncMatcher{inner: NewMatcher(lang)}
 	}

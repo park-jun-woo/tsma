@@ -16,7 +16,7 @@ func NewIndexer(lang string) Indexer {
 	case "java":
 		return newJavaTreeSitterIndexer()
 	case "csharp":
-		return &CsIndexer{}
+		return newCSharpTreeSitterIndexer()
 	default:
 		return &UnsupportedIndexer{Lang: lang}
 	}

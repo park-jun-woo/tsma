@@ -34,12 +34,19 @@ func TestNewFuncMatcherJava(t *testing.T) {
 	}
 }
 
+// TestNewFuncMatcherCsharp verifies C# returns the content-aware CsFuncMatcher
+// (Phase005d D2; CsMatcher is retained as its last-resort filename fallback).
+func TestNewFuncMatcherCsharp(t *testing.T) {
+	if _, ok := NewFuncMatcher("csharp").(*CsFuncMatcher); !ok {
+		t.Fatalf("NewFuncMatcher(csharp) = %T, want *CsFuncMatcher", NewFuncMatcher("csharp"))
+	}
+}
+
 // TestNewFuncMatcherNonGoFallback verifies that every remaining non-content
 // language returns a fallback adapter wrapping the language's legacy Matcher.
 func TestNewFuncMatcherNonGoFallback(t *testing.T) {
 	cases := map[string]Matcher{
 		"rust":    &RsMatcher{},
-		"csharp":  &CsMatcher{},
 		"unknown": &unsupportedMatcher{},
 	}
 	for lang, wantInner := range cases {
