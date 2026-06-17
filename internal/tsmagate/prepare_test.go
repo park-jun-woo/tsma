@@ -119,6 +119,92 @@ func TestPrepare_BrokenTestFileScanSkipped(t *testing.T) {
 	}
 }
 
+func TestIsLoopMode(t *testing.T) {
+	if isLoopMode(nil) {
+		t.Error("a nil session must not be loop mode")
+	}
+	s := quest.New()
+	if isLoopMode(s) {
+		t.Error("a session without MetaLoop must not be loop mode")
+	}
+	s.SetMeta(quest.MetaLoop, true)
+	if !isLoopMode(s) {
+		t.Error("a session with MetaLoop=true must be loop mode")
+	}
+	other := quest.New()
+	other.SetMeta(quest.MetaLoop, "not-a-bool")
+	if isLoopMode(other) {
+		t.Error("MetaLoop set to a non-true value must not be loop mode")
+	}
+}
+
+func TestPrepare_LoopModeWritesAndMeasures(t *testing.T) {
+	// Loop mode: the submitted raw is a complete covering test that must be
+	// written to disk, then re-matched, run, and measured to full coverage.
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":          "module looptest\n\ngo 1.22\n",
+		"pkg/classify.go": classifySrc,
+	})
+	chdirTo(t, root)
+	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
+	s := quest.New()
+	s.SetMeta(quest.MetaLoop, true)
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte(classifyFullTest))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "pkg", "classify_test.go")); statErr != nil {
+		t.Fatalf("loop mode should have written the test file: %v", statErr)
+	}
+	m, _ := asMeasurement(ctx)
+	if m.TestFailed {
+		t.Fatalf("unexpected TestFailed; FailOutput=%s", m.FailOutput)
+	}
+	if m.Report == nil || !m.Report.AllCovered {
+		t.Fatalf("expected a fully-covered report, got %+v", m.Report)
+	}
+}
+
+func TestPrepare_LoopModeTargetPathError(t *testing.T) {
+	// Loop mode with a non-Go function that has no test and no derivable path:
+	// testTargetPath fails and Prepare surfaces it as TestFailed (never silent).
+	root := t.TempDir()
+	fn := model.Function{QualifiedName: "app.x", Name: "x", File: filepath.Join("app", "x.py"), StartLine: 1, EndLine: 1}
+	s := quest.New()
+	s.SetMeta(quest.MetaLoop, true)
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "python", root, fn), []byte("ignored"))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed {
+		t.Fatal("expected TestFailed when the test path cannot be derived")
+	}
+}
+
+func TestPrepare_LoopModeWriteError(t *testing.T) {
+	// Loop mode where the canonical test path is already occupied by a directory,
+	// so writing the generated test fails: Prepare surfaces it as TestFailed.
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":     "module wfail\n\ngo 1.22\n",
+		"pkg/foo.go": "package pkg\n\nfunc Foo() int { return 1 }\n",
+	})
+	if err := os.MkdirAll(filepath.Join(root, "pkg", "foo_test.go"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
+	s := quest.New()
+	s.SetMeta(quest.MetaLoop, true)
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte("package pkg\n"))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed {
+		t.Fatal("expected TestFailed when the test file cannot be written")
+	}
+}
+
 func TestPrepare_NonGoSkipsSmellScan(t *testing.T) {
 	// A non-Go (Python) function matched by file name: the smell scan (Go-only)
 	// is skipped and the Python runner executes. The deliberately failing test

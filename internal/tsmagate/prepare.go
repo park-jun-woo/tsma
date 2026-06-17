@@ -1,5 +1,5 @@
 //ff:func feature=gate type=helper control=sequence level=error
-//ff:what Prepare: 부작용 격리 지점. payload에서 함수를 복원→테스트 재매칭(match.NewFuncMatcher)→테스트 실행(runner.NewRunner.Run)→통과 시 커버리지 측정(coverage.NewChecker.Check)→결과를 measurement으로 묶어 gate.Context에 실어 반환한다. 구버전 run_and_measure.go 로직을 이 시그니처로 재구성. tsma는 디스크의 테스트 파일을 재측정하는 모델이라 raw 제출 바이트는 무시한다. 테스트 실패/측정 에러는 measurement.TestFailed 플래그로 표현(룰이 발화하도록; short verdict 단락 대신 Rules 경유로 RootCause 보존).
+//ff:what Prepare: 부작용 격리 지점. payload에서 함수를 복원→(loop 모드면 raw=생성테스트를 디스크에 기록)→테스트 재매칭(match.NewFuncMatcher)→테스트 실행(runner.NewRunner.Run)→통과 시 커버리지 측정(coverage.NewChecker.Check)→결과를 measurement으로 묶어 gate.Context에 실어 반환한다. 수동 submit(MetaLoop 미설정)은 raw를 무시하고 디스크-truth만 재측정; loop(MetaLoop=true)는 정제→경로도출→쓰기 후 합류한다. 테스트 실패/측정/쓰기 에러는 measurement.TestFailed 플래그로 표현(룰이 발화하도록; short verdict 단락 대신 Rules 경유로 RootCause 보존).
 
 package tsmagate
 
@@ -35,8 +35,34 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 
 	m := &measurement{FuncName: fn.QualifiedName}
 
+	// Loop mode only (reins sets quest.MetaLoop while the `loop` command runs):
+	// raw is the LLM-generated test file and must reach disk before measurement,
+	// otherwise coverage never changes and every retry FAILs identically until
+	// MaxTries locks DONE (improvement 0). Manual submit (MetaLoop unset) skips
+	// this block, preserving the disk-truth contract — a submitted artifact is
+	// never written to an arbitrary path. Order (§2-1/§2-2): derive path from a
+	// pre-write match → sanitize → write; then fall through to the existing
+	// re-match → run → measure so loop and submit share one measurement path. A
+	// path-derivation or write failure is surfaced as TestFailed (never silent),
+	// which the tests-must-pass rule turns into a FAIL the loop feeds back.
+	if isLoopMode(s) {
+		pre, preFound := match.NewFuncMatcher(p.Lang).MatchFunc(p.Root, &fn)
+		path, err := testTargetPath(p, pre, preFound)
+		if err != nil {
+			m.TestFailed = true
+			m.FailOutput = err.Error()
+			return gate.Context{Item: it, Submission: m}, nil, nil
+		}
+		if err := writeTestFile(p.Root, path, sanitizeGoSource(string(raw))); err != nil {
+			m.TestFailed = true
+			m.FailOutput = err.Error()
+			return gate.Context{Item: it, Submission: m}, nil, nil
+		}
+	}
+
 	// Re-match the function's tests (content-aware for Go, file-name otherwise),
-	// mirroring detectTestChange so batch and single matching stay consistent.
+	// mirroring detectTestChange so batch and single matching stay consistent. In
+	// loop mode this reflects the just-written file (a new test now attributes).
 	tm, found := match.NewFuncMatcher(p.Lang).MatchFunc(p.Root, &fn)
 	if !found || len(tm.Files) == 0 {
 		// No test attributed: there is nothing to run, so this is a test failure
@@ -85,4 +111,18 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	m.Report = report
 
 	return gate.Context{Item: it, Submission: m}, nil, nil
+}
+
+// isLoopMode reports whether Prepare is being driven by the reins `loop` command,
+// which sets quest.MetaLoop=true on the session for the loop's duration. It is
+// nil-safe: a manual submit/next path (and the unit tests) may pass a nil session,
+// which is treated as not-loop so the disk-truth contract holds. Only this signal
+// — the run mode, not the presence of raw bytes — gates the generated-test write
+// (§2-1), so submit's --in payload is never written to disk.
+func isLoopMode(s *quest.Session) bool {
+	if s == nil {
+		return false
+	}
+	v, ok := s.GetMeta(quest.MetaLoop)
+	return ok && v == true
 }

@@ -5,17 +5,15 @@ package match
 import (
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func (m *GoMatcher) Match(projectRoot string, sourceFile string) (string, bool) {
-	base := filepath.Base(sourceFile)
-	if !strings.HasSuffix(base, ".go") {
+	// CanonicalTestPath is the single source of the <base>_test.go formula; ""
+	// means the source is not a derivable Go file (non-.go), so no match.
+	testRel := CanonicalTestPath("go", sourceFile)
+	if testRel == "" {
 		return "", false
 	}
-
-	testBase := strings.TrimSuffix(base, ".go") + "_test.go"
-	testRel := filepath.Join(filepath.Dir(sourceFile), testBase)
 	absPath := filepath.Join(projectRoot, testRel)
 
 	if _, err := os.Stat(absPath); err != nil {

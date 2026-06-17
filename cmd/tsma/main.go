@@ -1,5 +1,5 @@
 //ff:func feature=cli type=command control=sequence level=error
-//ff:what tsma 엔트리포인트. reins NewQuestCmd로 표준 quest CLI(scan/next/submit/status/export/rules)를 조립하고, 도메인 게이트는 tsmagate.Definition만 끼운다.
+//ff:what tsma 엔트리포인트. reins NewQuestCmd로 표준 quest CLI(scan/next/submit/status/export/rules)를 조립하고, 도메인 게이트는 tsmagate.Definition만 끼운다. Options.Loop에 tsmagate.LoopOptions()를 실어 무인 generate→gate→retry `loop` 명령을 부착한다.
 
 // Command tsma drives LLMs toward 100% branch coverage across languages, on top
 // of the reins deterministic quest gate. The domain logic (seed/render/measure/
@@ -14,5 +14,8 @@ import (
 
 func main() {
 	def := tsmagate.New()
-	cli.NewQuestCmd("tsma", def, cli.Options{Version: "0.5.0-reins"}).Execute()
+	cli.NewQuestCmd("tsma", def, cli.Options{
+		Version: "0.5.0-reins",
+		Loop:    tsmagate.LoopOptions(),
+	}).Execute()
 }

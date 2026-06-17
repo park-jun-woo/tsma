@@ -5,7 +5,6 @@ package match
 import (
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // FindMisnamedTest checks whether a non-canonical test_ prefixed Go test file
@@ -13,18 +12,15 @@ import (
 // <base>_test.go is missing. Only Go sources are handled; any other lang
 // (including python) always returns found=false.
 func FindMisnamedTest(projectRoot, lang, sourceFile string) (misnamedRel, canonicalRel string, found bool) {
-	if lang != "go" {
-		return "", "", false
-	}
-
-	base := filepath.Base(sourceFile)
-	if !strings.HasSuffix(base, ".go") {
+	// The canonical <base>_test.go path comes from the shared formula; "" means
+	// a non-Go lang or a non-.go source — neither has a misnamed variant.
+	canonicalRel = CanonicalTestPath(lang, sourceFile)
+	if canonicalRel == "" {
 		return "", "", false
 	}
 
 	srcDir := filepath.Dir(sourceFile)
-	canonicalBase := strings.TrimSuffix(base, ".go") + "_test.go"
-	canonicalRel = filepath.Join(srcDir, canonicalBase)
+	canonicalBase := filepath.Base(canonicalRel)
 
 	// Canonical test file already exists -> normal, do not intervene.
 	if _, err := os.Stat(filepath.Join(projectRoot, canonicalRel)); err == nil {

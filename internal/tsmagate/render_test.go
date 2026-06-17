@@ -60,11 +60,28 @@ func TestRender_TestFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
-	if !strings.Contains(out, "test: "+filepath.Join("pkg", "foo_test.go")) {
+	if !strings.Contains(out, "Existing test file: "+filepath.Join("pkg", "foo_test.go")) {
 		t.Errorf("output missing matched test path:\n%s", out)
 	}
-	if strings.Contains(out, "(not found)") {
-		t.Errorf("output should not say not found:\n%s", out)
+	if strings.Contains(out, "(none)") {
+		t.Errorf("output should not say none when a test is found:\n%s", out)
+	}
+}
+
+func TestRender_WithReceiver(t *testing.T) {
+	// A method (Receiver set) takes the Receiver branch, printing the receiver
+	// line in the prompt.
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":     "module rendertest\n\ngo 1.22\n",
+		"pkg/foo.go": "package pkg\n\ntype T struct{}\n\nfunc (T) Foo() int { return 1 }\n",
+	})
+	fn := model.Function{QualifiedName: "pkg.T.Foo", Name: "Foo", Receiver: "T", File: filepath.Join("pkg", "foo.go"), StartLine: 5, EndLine: 5}
+	out, err := New().Render(nil, itemWithPayload(t, "go", root, fn))
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(out, "Receiver: T") {
+		t.Errorf("output missing receiver line:\n%s", out)
 	}
 }
 
@@ -81,8 +98,8 @@ func TestRender_NotFoundWithMisnamedHint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
-	if !strings.Contains(out, "(not found)") {
-		t.Errorf("expected not-found marker:\n%s", out)
+	if !strings.Contains(out, "(none)") {
+		t.Errorf("expected none marker:\n%s", out)
 	}
 	if !strings.Contains(out, "misnamed") {
 		t.Errorf("expected a rename hint:\n%s", out)
@@ -100,8 +117,8 @@ func TestRender_NotFoundNoHint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
-	if !strings.Contains(out, "(not found)") {
-		t.Errorf("expected not-found marker:\n%s", out)
+	if !strings.Contains(out, "(none)") {
+		t.Errorf("expected none marker:\n%s", out)
 	}
 	if strings.Contains(out, "misnamed") {
 		t.Errorf("did not expect a rename hint:\n%s", out)
