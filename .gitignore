@@ -7,6 +7,7 @@
 /.whyso/
 /bugs/
 /bak/
+/files/
 # reins 런타임 산출물
 /session.json
 /tsma-results.jsonl
