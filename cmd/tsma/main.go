@@ -1,12 +1,18 @@
-//ff:func feature=cli type=command control=sequence
-//ff:what Entry point that delegates to the CLI Execute function
+//ff:func feature=cli type=command control=sequence level=error
+//ff:what tsma 엔트리포인트. reins NewQuestCmd로 표준 quest CLI(scan/next/submit/status/export/rules)를 조립하고, 도메인 게이트는 tsmagate.Definition만 끼운다.
+
+// Command tsma drives LLMs toward 100% branch coverage across languages, on top
+// of the reins deterministic quest gate. The domain logic (seed/render/measure/
+// rules) lives in internal/tsmagate; reins supplies the ratchet, command
+// skeleton, aggregation, and export.
 package main
 
-import "github.com/park-jun-woo/tsma/internal/cli"
-
-// Version is set at build time via ldflags.
-var Version = "dev"
+import (
+	"github.com/park-jun-woo/reins/pkg/cli"
+	"github.com/park-jun-woo/tsma/internal/tsmagate"
+)
 
 func main() {
-	cli.Execute(Version)
+	def := tsmagate.New()
+	cli.NewQuestCmd("tsma", def, cli.Options{Version: "0.5.0-reins"}).Execute()
 }
