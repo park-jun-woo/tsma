@@ -26,12 +26,19 @@ func TestNewFuncMatcherPython(t *testing.T) {
 	}
 }
 
+// TestNewFuncMatcherJava verifies Java returns the content-aware JavaFuncMatcher
+// (Phase005c D2; JavaMatcher is retained as its last-resort filename fallback).
+func TestNewFuncMatcherJava(t *testing.T) {
+	if _, ok := NewFuncMatcher("java").(*JavaFuncMatcher); !ok {
+		t.Fatalf("NewFuncMatcher(java) = %T, want *JavaFuncMatcher", NewFuncMatcher("java"))
+	}
+}
+
 // TestNewFuncMatcherNonGoFallback verifies that every remaining non-content
 // language returns a fallback adapter wrapping the language's legacy Matcher.
 func TestNewFuncMatcherNonGoFallback(t *testing.T) {
 	cases := map[string]Matcher{
 		"rust":    &RsMatcher{},
-		"java":    &JavaMatcher{},
 		"csharp":  &CsMatcher{},
 		"unknown": &unsupportedMatcher{},
 	}

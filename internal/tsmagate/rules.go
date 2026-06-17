@@ -34,5 +34,7 @@ func (d *Definition) Rules() []gate.Rule {
 		tsAsAnyInTest,
 		tsReflectInTest,
 		tsOwnPropertyInTest,
+		javaReflectInTest,
+		javaSetAccessibleInTest,
 	}
 }

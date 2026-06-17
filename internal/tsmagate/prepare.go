@@ -65,7 +65,7 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 			m.FailOutput = err.Error()
 			return gate.Context{Item: it, Submission: m}, nil, nil
 		}
-		if err := writeTestFile(p.Root, path, sanitizeGoSource(string(raw))); err != nil {
+		if err := writeTestFile(p.Root, path, sanitizeSource(p.Lang, string(raw))); err != nil {
 			m.TestFailed = true
 			m.FailOutput = err.Error()
 			return gate.Context{Item: it, Submission: m}, nil, nil

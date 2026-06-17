@@ -35,9 +35,12 @@ func TestNewIndexerReturnsRsIndexer(t *testing.T) {
 }
 
 func TestNewIndexerReturnsJavaIndexer(t *testing.T) {
+	// Phase005c: the java factory entry returns the tree-sitter precise indexer
+	// (JavaIndexer is retained as its line-based fallback, asserted in
+	// java_fallback_test.go).
 	idx := NewIndexer("java")
-	if _, ok := idx.(*JavaIndexer); !ok {
-		t.Errorf("NewIndexer(\"java\") returned %T, want *JavaIndexer", idx)
+	if _, ok := idx.(*TreeSitterIndexer); !ok {
+		t.Errorf("NewIndexer(\"java\") returned %T, want *TreeSitterIndexer", idx)
 	}
 }
 

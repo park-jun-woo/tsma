@@ -65,12 +65,29 @@ func TestRules_PartialCoverageWithSmell_Fail(t *testing.T) {
 	}
 }
 
-func TestRules_Catalog_FiveRules(t *testing.T) {
-	// Phase005a D4 adds the three TS smell rules (LevelReview): 2 Fail (G-001,
-	// G-002/G-004) + 3 Go-reflect Review + 3 TS-reflect Review = 8.
+func TestRules_FullCoverageWithJavaSmell_Review(t *testing.T) {
+	m := &measurement{
+		FuncName: "p.Calculator.add",
+		Report:   &coverage.Report{AllCovered: true, TotalPct: 100},
+		Smells: []smell.Finding{
+			{Rule: "TS-REFL-JV-002", File: "CalculatorTest.java", Line: 13, Note: "setAccessible(true)"},
+		},
+	}
+	v := evalVerdict(m)
+	if v.Outcome != quest.OutReview {
+		t.Fatalf("Outcome = %s, want REVIEW", v.Outcome)
+	}
+	if v.RootCause != "TS-REFL-JV-002" {
+		t.Fatalf("RootCause = %q, want TS-REFL-JV-002", v.RootCause)
+	}
+}
+
+func TestRules_Catalog_TenRules(t *testing.T) {
+	// 2 Fail (G-001, G-002/G-004) + 3 Go-reflect Review + 3 TS-reflect Review
+	// (005a) + 2 Java-reflect Review (005c) = 10.
 	rules := New().Rules()
-	if len(rules) != 8 {
-		t.Fatalf("len(Rules) = %d, want 8", len(rules))
+	if len(rules) != 10 {
+		t.Fatalf("len(Rules) = %d, want 10", len(rules))
 	}
 	var fail, review int
 	for _, r := range rules {
@@ -81,7 +98,7 @@ func TestRules_Catalog_FiveRules(t *testing.T) {
 			review++
 		}
 	}
-	if fail != 2 || review != 6 {
-		t.Fatalf("levels: fail=%d review=%d, want fail=2 review=6", fail, review)
+	if fail != 2 || review != 8 {
+		t.Fatalf("levels: fail=%d review=%d, want fail=2 review=8", fail, review)
 	}
 }

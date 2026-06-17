@@ -14,6 +14,7 @@ var langGrammar = map[string]struct {
 	nodePkg []string
 }{
 	"typescript": {env: "TSMA_TS_GRAMMAR", nodePkg: []string{"tree-sitter-typescript", "typescript"}},
+	"java":       {env: "TSMA_JAVA_GRAMMAR", nodePkg: []string{"tree-sitter-java"}},
 }
 
 // ResolveGrammar returns the grammar directory for lang, or "" if not found.

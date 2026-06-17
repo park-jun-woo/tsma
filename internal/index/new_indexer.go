@@ -14,7 +14,7 @@ func NewIndexer(lang string) Indexer {
 	case "rust":
 		return &RsIndexer{}
 	case "java":
-		return &JavaIndexer{}
+		return newJavaTreeSitterIndexer()
 	case "csharp":
 		return &CsIndexer{}
 	default:
