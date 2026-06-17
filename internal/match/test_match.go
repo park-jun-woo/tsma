@@ -10,4 +10,11 @@ package match
 type TestMatch struct {
 	Files     []string
 	TestFuncs []string
+	// Overlay carries the loop's non-invasive measurement plan: it maps absolute
+	// virtual paths (a fresh _test.go inside the source package directory) to the
+	// absolute backing file under .tsma/test that holds the generated test. When
+	// non-empty, the Go runner/checker pass `go test -overlay <json> -vet=off` so
+	// the test is compiled into the package without ever touching the source tree.
+	// Empty for manual submit and non-Go matches (current disk-truth behavior).
+	Overlay map[string]string
 }

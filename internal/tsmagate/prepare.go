@@ -33,6 +33,15 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	}
 	fn := p.Fn
 
+	// Go loop mode (C2): measure the generated test non-invasively via
+	// `go test -overlay` — the test never touches the source tree, so a broken
+	// generation cannot contaminate sibling functions and a brand-new test still
+	// attributes (the disk re-match is bypassed). This whole branch returns before
+	// the disk-truth path below; only Go is supported (non-Go overlay is Phase 004).
+	if isLoopMode(s) && p.Lang == "go" {
+		return gate.Context{Item: it, Submission: prepareLoopGo(it, p, raw)}, nil, nil
+	}
+
 	m := &measurement{FuncName: fn.QualifiedName}
 
 	// Loop mode only (reins sets quest.MetaLoop while the `loop` command runs):

@@ -35,7 +35,12 @@ func (r *GoRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
 		return nil, fmt.Errorf("extract test functions: %w", err)
 	}
 
-	args := buildGoTestArgs(pkgPath, testFuncs)
+	overlayArgs, err := GoOverlayArgs(projectRoot, m.Overlay)
+	if err != nil {
+		return nil, fmt.Errorf("write overlay: %w", err)
+	}
+
+	args := buildGoTestArgs(pkgPath, testFuncs, overlayArgs)
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = projectRoot

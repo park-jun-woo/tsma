@@ -49,6 +49,12 @@ func (c *GoChecker) Check(projectRoot string, m match.TestMatch, fn *model.Funct
 		}
 	}
 
+	overlayArgs, oerr := runner.GoOverlayArgs(projectRoot, m.Overlay)
+	if oerr != nil {
+		return nil, fmt.Errorf("write overlay: %w", oerr)
+	}
+	args = append(args, overlayArgs...)
+
 	args = append(args, pkgPath)
 
 	cmd := exec.Command("go", args...)

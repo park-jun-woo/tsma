@@ -182,9 +182,11 @@ func TestPrepare_LoopModeTargetPathError(t *testing.T) {
 	}
 }
 
-func TestPrepare_LoopModeWriteError(t *testing.T) {
-	// Loop mode where the canonical test path is already occupied by a directory,
-	// so writing the generated test fails: Prepare surfaces it as TestFailed.
+func TestPrepare_LoopModeMaterializeError(t *testing.T) {
+	// Go loop mode where the canonical test path is occupied by a directory: the
+	// overlay measurement passes at full coverage, so finalizeBacking promotes the
+	// backing to the canonical path — and that write fails. promoteBacking surfaces
+	// it as TestFailed (a PASS that cannot persist is fed back, never silent).
 	root := writeGoPkg(t, map[string]string{
 		"go.mod":     "module wfail\n\ngo 1.22\n",
 		"pkg/foo.go": "package pkg\n\nfunc Foo() int { return 1 }\n",
@@ -192,16 +194,18 @@ func TestPrepare_LoopModeWriteError(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "pkg", "foo_test.go"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
 	s := quest.New()
 	s.SetMeta(quest.MetaLoop, true)
-	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte("package pkg\n"))
+	full := "package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) { if Foo() != 1 { t.Fatal(\"x\") } }\n"
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte(full))
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
 	m, _ := asMeasurement(ctx)
 	if !m.TestFailed {
-		t.Fatal("expected TestFailed when the test file cannot be written")
+		t.Fatal("expected TestFailed when the canonical test file cannot be materialized")
 	}
 }
 

@@ -21,6 +21,11 @@ type measurement struct {
 	TestFailed bool
 	// FailOutput is the test/measurement failure text surfaced as feedback.
 	FailOutput string
+	// Truncated is true when (loop mode, C3) the generated source did not parse
+	// after sanitize+tidy — the model's output was cut off. It implies TestFailed
+	// and makes tests-must-pass emit a dedicated "emit the ENTIRE file" Fact
+	// instead of a raw compiler error, so a weak model can self-correct.
+	Truncated bool
 	// Report is the branch-coverage result; nil when TestFailed.
 	Report *coverage.Report
 	// FuncName is the qualified name of the function under test (for Fact.Where).

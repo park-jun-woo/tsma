@@ -138,7 +138,7 @@ func TestHello(t *testing.T) {}
 	if err != nil {
 		t.Fatalf("resolveGoPkgPath: %v", err)
 	}
-	args := buildGoTestArgs(pkgPath, funcs)
+	args := buildGoTestArgs(pkgPath, funcs, nil)
 	if len(args) < 4 {
 		t.Fatalf("args too short: %v", args)
 	}

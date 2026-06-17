@@ -3,7 +3,7 @@ package runner
 import "testing"
 
 func TestBuildGoTestArgsWithFuncs(t *testing.T) {
-	args := buildGoTestArgs("./internal/handler", []string{"TestLogin", "TestSignup"})
+	args := buildGoTestArgs("./internal/handler", []string{"TestLogin", "TestSignup"}, nil)
 	expected := []string{"test", "-v", "-count=1", "-run", "^(TestLogin|TestSignup)$", "./internal/handler"}
 
 	if len(args) != len(expected) {
@@ -17,7 +17,7 @@ func TestBuildGoTestArgsWithFuncs(t *testing.T) {
 }
 
 func TestBuildGoTestArgsNoFuncs(t *testing.T) {
-	args := buildGoTestArgs("./internal/handler", nil)
+	args := buildGoTestArgs("./internal/handler", nil, nil)
 	expected := []string{"test", "-v", "-count=1", "./internal/handler"}
 
 	if len(args) != len(expected) {
@@ -31,7 +31,7 @@ func TestBuildGoTestArgsNoFuncs(t *testing.T) {
 }
 
 func TestBuildGoTestArgsEmptyFuncs(t *testing.T) {
-	args := buildGoTestArgs("./pkg/auth", []string{})
+	args := buildGoTestArgs("./pkg/auth", []string{}, nil)
 	expected := []string{"test", "-v", "-count=1", "./pkg/auth"}
 
 	if len(args) != len(expected) {
@@ -45,7 +45,7 @@ func TestBuildGoTestArgsEmptyFuncs(t *testing.T) {
 }
 
 func TestBuildGoTestArgsSingleFunc(t *testing.T) {
-	args := buildGoTestArgs("./cmd", []string{"TestMain"})
+	args := buildGoTestArgs("./cmd", []string{"TestMain"}, nil)
 	expected := []string{"test", "-v", "-count=1", "-run", "^TestMain$", "./cmd"}
 
 	if len(args) != len(expected) {

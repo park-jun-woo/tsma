@@ -24,6 +24,13 @@ var testsMustPass = gate.Rule{
 		if !m.TestFailed {
 			return false, quest.Fact{}
 		}
+		if m.Truncated {
+			return true, quest.Fact{
+				Where:    m.FuncName,
+				Expected: "complete compilable file",
+				Actual:   "output appears truncated/incomplete — emit the ENTIRE file in one block",
+			}
+		}
 		actual := strings.TrimSpace(m.FailOutput)
 		if actual == "" {
 			actual = "tests did not pass"
