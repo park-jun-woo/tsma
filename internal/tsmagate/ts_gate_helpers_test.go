@@ -172,8 +172,15 @@ func TestPrepareLoopTS_Direct(t *testing.T) {
 
 func TestPrepareLoopNative_Dispatch(t *testing.T) {
 	// unsupported language -> (nil, false), Prepare then uses the generic path.
-	if m, ok := prepareLoopNative(&quest.Item{Key: "x"}, funcPayload{Lang: "rust"}, nil); ok || m != nil {
-		t.Errorf("prepareLoopNative(rust) = (%v,%v), want (nil,false)", m, ok)
+	if m, ok := prepareLoopNative(&quest.Item{Key: "x"}, funcPayload{Lang: "ruby"}, nil); ok || m != nil {
+		t.Errorf("prepareLoopNative(ruby) = (%v,%v), want (nil,false)", m, ok)
+	}
+
+	// Rust (Phase005e): now has a native in-file pipeline. An empty raw declares no
+	// #[test] fn, so prepareLoopRs rejects it before any write — exercises the
+	// "rust" dispatch arm returning (non-nil, true).
+	if m, ok := prepareLoopNative(&quest.Item{Key: "src.calc.add"}, funcPayload{Lang: "rust", Root: t.TempDir(), Fn: model.Function{File: "src/calc.rs", Name: "add"}}, nil); !ok || m == nil || !m.TestFailed {
+		t.Errorf("prepareLoopNative(rust) = (%+v,%v), want non-nil TestFailed,true", m, ok)
 	}
 
 	// Go: a non-parseable raw short-circuits prepareLoopGo as truncated (fast, no

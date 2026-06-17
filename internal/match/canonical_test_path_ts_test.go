@@ -21,8 +21,12 @@ func TestCanonicalTestPathTypescript(t *testing.T) {
 			t.Errorf("CanonicalTestPath(typescript, %q) = %q, want %q", c.src, got, c.want)
 		}
 	}
-	// Non-handled language still returns "".
-	if got := CanonicalTestPath("rust", "x.rs"); got != "" {
-		t.Errorf("rust should be unhandled, got %q", got)
+	// Rust (Phase005e): the source file itself is the in-file #[cfg(test)] target.
+	if got := CanonicalTestPath("rust", "src/x.rs"); got != "src/x.rs" {
+		t.Errorf("rust should map to the source file, got %q", got)
+	}
+	// A genuinely non-handled language still returns "".
+	if got := CanonicalTestPath("ruby", "x.rb"); got != "" {
+		t.Errorf("ruby should be unhandled, got %q", got)
 	}
 }

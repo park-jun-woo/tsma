@@ -36,5 +36,10 @@ func (d *Definition) Rules() []gate.Rule {
 		tsOwnPropertyInTest,
 		javaReflectInTest,
 		javaSetAccessibleInTest,
+		csReflectInTest,
+		csReflectInfoInTest,
+		rsUnsafeInTest,
+		rsTransmuteInTest,
+		rsPtrInTest,
 	}
 }

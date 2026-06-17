@@ -15,6 +15,8 @@ func sanitizeSource(lang, raw string) string {
 		return sanitizeJavaSource(raw)
 	case "csharp":
 		return sanitizeCsSource(raw)
+	case "rust":
+		return sanitizeRsSource(raw)
 	default:
 		return sanitizeGoSource(raw)
 	}

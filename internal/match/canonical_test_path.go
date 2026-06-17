@@ -1,5 +1,5 @@
 //ff:func feature=match type=helper control=selection
-//ff:what Derives the canonical test path for a source file — the single source of truth for the test-naming formula reused by GoMatcher.Match, FindMisnamedTest, and the loop's write path. Go: <base>_test.go. TypeScript (Phase005a): <base>.test.<ext> (jest/vitest). Python (Phase005b): test_<base>.py (pytest). Java (Phase005c): src/test mirror FooTest.java (JUnit, via javaTestDir SSOT). C# (Phase005d): parallel *.Tests project FooTests.cs (xUnit, via csTestDirs SSOT). Non-handled languages return "".
+//ff:what Derives the canonical test path for a source file — the single source of truth for the test-naming formula reused by GoMatcher.Match, FindMisnamedTest, and the loop's write path. Go: <base>_test.go. TypeScript (Phase005a): <base>.test.<ext> (jest/vitest). Python (Phase005b): test_<base>.py (pytest). Java (Phase005c): src/test mirror FooTest.java (JUnit, via javaTestDir SSOT). C# (Phase005d): parallel *.Tests project FooTests.cs (xUnit, via csTestDirs SSOT). Rust (Phase005e): the source file itself — unit tests live in an in-file #[cfg(test)] mod, not a separate file. Non-handled languages return "".
 package match
 
 import (
@@ -35,6 +35,8 @@ func CanonicalTestPath(lang, sourceFile string) string {
 		return canonicalJavaTestPath(sourceFile, base)
 	case "csharp":
 		return canonicalCsTestPath(sourceFile, base)
+	case "rust":
+		return canonicalRsTestPath(sourceFile, base)
 	default:
 		return ""
 	}

@@ -82,12 +82,64 @@ func TestRules_FullCoverageWithJavaSmell_Review(t *testing.T) {
 	}
 }
 
-func TestRules_Catalog_TenRules(t *testing.T) {
+func TestRules_FullCoverageWithCsharpSmell_Review(t *testing.T) {
+	m := &measurement{
+		FuncName: "Calc.Calculator.Add",
+		Report:   &coverage.Report{AllCovered: true, TotalPct: 100},
+		Smells: []smell.Finding{
+			{Rule: "TS-REFL-CS-001", File: "CalculatorTests.cs", Line: 12, Note: "GetMethod(...)"},
+		},
+	}
+	v := evalVerdict(m)
+	if v.Outcome != quest.OutReview {
+		t.Fatalf("Outcome = %s, want REVIEW", v.Outcome)
+	}
+	if v.RootCause != "TS-REFL-CS-001" {
+		t.Fatalf("RootCause = %q, want TS-REFL-CS-001", v.RootCause)
+	}
+}
+
+func TestRules_FullCoverageWithCsharpInfoSmell_Review(t *testing.T) {
+	m := &measurement{
+		FuncName: "Calc.Calculator.Add",
+		Report:   &coverage.Report{AllCovered: true, TotalPct: 100},
+		Smells: []smell.Finding{
+			{Rule: "TS-REFL-CS-002", File: "CalculatorTests.cs", Line: 14, Note: "MethodInfo m"},
+		},
+	}
+	v := evalVerdict(m)
+	if v.Outcome != quest.OutReview {
+		t.Fatalf("Outcome = %s, want REVIEW", v.Outcome)
+	}
+	if v.RootCause != "TS-REFL-CS-002" {
+		t.Fatalf("RootCause = %q, want TS-REFL-CS-002", v.RootCause)
+	}
+}
+
+func TestRules_FullCoverageWithRustSmell_Review(t *testing.T) {
+	m := &measurement{
+		FuncName: "src.calc.add",
+		Report:   &coverage.Report{AllCovered: true, TotalPct: 100},
+		Smells: []smell.Finding{
+			{Rule: "TS-REFL-RS-002", File: "src/calc.rs", Line: 31, Note: "transmute()"},
+		},
+	}
+	v := evalVerdict(m)
+	if v.Outcome != quest.OutReview {
+		t.Fatalf("Outcome = %s, want REVIEW", v.Outcome)
+	}
+	if v.RootCause != "TS-REFL-RS-002" {
+		t.Fatalf("RootCause = %q, want TS-REFL-RS-002", v.RootCause)
+	}
+}
+
+func TestRules_Catalog_AllLanguages(t *testing.T) {
 	// 2 Fail (G-001, G-002/G-004) + 3 Go-reflect Review + 3 TS-reflect Review
-	// (005a) + 2 Java-reflect Review (005c) = 10.
+	// (005a) + 2 Java-reflect Review (005c) + 2 C#-reflect Review (005d) +
+	// 3 Rust-reflect Review (005e) = 15.
 	rules := New().Rules()
-	if len(rules) != 10 {
-		t.Fatalf("len(Rules) = %d, want 10", len(rules))
+	if len(rules) != 15 {
+		t.Fatalf("len(Rules) = %d, want 15", len(rules))
 	}
 	var fail, review int
 	for _, r := range rules {
@@ -98,7 +150,7 @@ func TestRules_Catalog_TenRules(t *testing.T) {
 			review++
 		}
 	}
-	if fail != 2 || review != 8 {
-		t.Fatalf("levels: fail=%d review=%d, want fail=2 review=8", fail, review)
+	if fail != 2 || review != 13 {
+		t.Fatalf("levels: fail=%d review=%d, want fail=2 review=13", fail, review)
 	}
 }

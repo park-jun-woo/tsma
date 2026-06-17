@@ -139,8 +139,8 @@ func TestTestTargetPath_RenameError(t *testing.T) {
 func TestTestTargetPath_UnderivablePathErrors(t *testing.T) {
 	// A function in a language without a canonical-path rule, with no attributed
 	// test and no misnamed variant: the path cannot be derived, so an error is
-	// returned. (Python/TS are now handled, so use a still-unhandled language.)
-	p := funcPayload{Lang: "rust", Root: t.TempDir(), Fn: model.Function{File: filepath.Join("app", "x.rs")}}
+	// returned. (Python/TS/Rust are now handled, so use a still-unhandled language.)
+	p := funcPayload{Lang: "ruby", Root: t.TempDir(), Fn: model.Function{File: filepath.Join("app", "x.rb")}}
 	if _, err := testTargetPath(p, match.TestMatch{}, false); err == nil {
 		t.Fatal("expected an error when no test path can be derived")
 	}

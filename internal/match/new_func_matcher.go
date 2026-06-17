@@ -18,6 +18,8 @@ func NewFuncMatcher(lang string) FuncMatcher {
 		return &JavaFuncMatcher{}
 	case "csharp":
 		return &CsFuncMatcher{}
+	case "rust":
+		return &RsFuncMatcher{}
 	default:
 		return &fallbackFuncMatcher{inner: NewMatcher(lang)}
 	}

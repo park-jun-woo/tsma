@@ -28,9 +28,12 @@ func TestNewIndexerReturnsPyIndexer(t *testing.T) {
 }
 
 func TestNewIndexerReturnsRsIndexer(t *testing.T) {
+	// Phase005e: the rust factory entry returns the tree-sitter precise indexer
+	// (RsIndexer is retained as its line-based fallback, asserted in
+	// rs_fallback_test.go).
 	idx := NewIndexer("rust")
-	if _, ok := idx.(*RsIndexer); !ok {
-		t.Errorf("NewIndexer(\"rust\") returned %T, want *RsIndexer", idx)
+	if _, ok := idx.(*TreeSitterIndexer); !ok {
+		t.Errorf("NewIndexer(\"rust\") returned %T, want *TreeSitterIndexer", idx)
 	}
 }
 

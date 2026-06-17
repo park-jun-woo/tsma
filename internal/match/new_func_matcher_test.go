@@ -42,11 +42,18 @@ func TestNewFuncMatcherCsharp(t *testing.T) {
 	}
 }
 
+// TestNewFuncMatcherRust verifies Rust returns the content-aware RsFuncMatcher
+// (Phase005e D2; RsMatcher is retained as its last-resort filename fallback).
+func TestNewFuncMatcherRust(t *testing.T) {
+	if _, ok := NewFuncMatcher("rust").(*RsFuncMatcher); !ok {
+		t.Fatalf("NewFuncMatcher(rust) = %T, want *RsFuncMatcher", NewFuncMatcher("rust"))
+	}
+}
+
 // TestNewFuncMatcherNonGoFallback verifies that every remaining non-content
 // language returns a fallback adapter wrapping the language's legacy Matcher.
 func TestNewFuncMatcherNonGoFallback(t *testing.T) {
 	cases := map[string]Matcher{
-		"rust":    &RsMatcher{},
 		"unknown": &unsupportedMatcher{},
 	}
 	for lang, wantInner := range cases {

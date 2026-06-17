@@ -12,7 +12,7 @@ func NewIndexer(lang string) Indexer {
 	case "python":
 		return newPyAstIndexer()
 	case "rust":
-		return &RsIndexer{}
+		return newRsTreeSitterIndexer()
 	case "java":
 		return newJavaTreeSitterIndexer()
 	case "csharp":
