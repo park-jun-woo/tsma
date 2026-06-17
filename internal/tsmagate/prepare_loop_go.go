@@ -1,5 +1,5 @@
 //ff:func feature=gate type=helper control=sequence lang=go
-//ff:what prepareLoopGo: Go 루프 분기의 비침습 측정 파이프라인(C2/C3). 생성 raw를 sanitize+tidy→go/parser 파싱(실패=잘림 C3: TestFailed+Truncated, 파일 미기록)→AST에서 테스트함수 직접 추출→backing(.tsma/test) 기록 + 가상경로 overlay TestMatch 직접 구성(MatchFunc 우회)→smell은 backing 직접 스캔→runner/checker가 -overlay -vet=off로 소스 트리 무침습 측정→종결 시에만 정명 경로로 materialize. measurement를 돌려준다.
+//ff:what prepareLoopGo: Go 루프 분기의 비침습 측정 파이프라인(C2/C3). 생성 raw를 sanitize+tidy→go/parser 파싱(실패=잘림 C3: TestFailed+Truncated, 파일 미기록)→AST에서 테스트함수 직접 추출→잘못된 테스트명(go test가 무시할 TestXxx 위반)이면 측정 전 reject(C1 보강)→backing(.tsma/test) 기록 + 가상경로 overlay TestMatch 직접 구성(MatchFunc 우회)→smell은 backing 직접 스캔→runner/checker가 -overlay -vet=off로 소스 트리 무침습 측정→종결 처리(materialize 후/실패 후 backing·overlay JSON 정리, C2)는 finalizeBacking. measurement를 돌려준다.
 package tsmagate
 
 import "github.com/park-jun-woo/reins/pkg/quest"
@@ -18,6 +18,13 @@ func prepareLoopGo(it *quest.Item, p funcPayload, raw []byte) *measurement {
 	funcs, ok := parseTestFuncs(src)
 	if !ok {
 		m.TestFailed, m.Truncated = true, true
+		return m
+	}
+	if bad, malformed := firstMalformedTestName(funcs); malformed {
+		m.TestFailed = true
+		m.FailExpected = "well-formed Go test names (TestXxx — uppercase after 'Test')"
+		m.FailOutput = "test name `" + bad + "` is malformed: the character after 'Test' must be uppercase, " +
+			"else `go test` silently skips it and nothing runs"
 		return m
 	}
 	tm, backingRel, err := buildLoopTestMatch(p, it, src, funcs)

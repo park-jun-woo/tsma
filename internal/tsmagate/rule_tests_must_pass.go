@@ -35,9 +35,13 @@ var testsMustPass = gate.Rule{
 		if actual == "" {
 			actual = "tests did not pass"
 		}
+		expected := "tests pass"
+		if m.FailExpected != "" {
+			expected = m.FailExpected
+		}
 		return true, quest.Fact{
 			Where:    m.FuncName,
-			Expected: "tests pass",
+			Expected: expected,
 			Actual:   firstLines(actual, 6),
 		}
 	},

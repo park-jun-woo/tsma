@@ -21,6 +21,11 @@ type measurement struct {
 	TestFailed bool
 	// FailOutput is the test/measurement failure text surfaced as feedback.
 	FailOutput string
+	// FailExpected overrides the tests-must-pass Fact.Expected for a vacuous pass
+	// (C1): a test that compiles and exits 0 but covers 0% of the target, or a
+	// malformed test name `go test` ignores. Empty falls back to the default
+	// "tests pass" so plain build/run failures keep their wording.
+	FailExpected string
 	// Truncated is true when (loop mode, C3) the generated source did not parse
 	// after sanitize+tidy — the model's output was cut off. It implies TestFailed
 	// and makes tests-must-pass emit a dedicated "emit the ENTIRE file" Fact

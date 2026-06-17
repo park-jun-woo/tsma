@@ -209,6 +209,89 @@ func TestPrepare_LoopModeMaterializeError(t *testing.T) {
 	}
 }
 
+func TestPrepare_GoCoverageError(t *testing.T) {
+	// The disk-truth path: the test runs and passes, but .tsma is occupied by a
+	// regular file so the coverage step (which writes under .tsma) cannot run ->
+	// a measurement error is surfaced as TestFailed (rulebook G-001).
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":     "module covfail\n\ngo 1.22\n",
+		"pkg/foo.go": "package pkg\n\nfunc Foo() int { return 1 }\n",
+		"pkg/foo_test.go": "package pkg\n\nimport \"testing\"\n\n" +
+			"func TestFoo(t *testing.T) {\n\tif Foo() != 1 {\n\t\tt.Fatal(\"x\")\n\t}\n}\n",
+	})
+	if err := os.WriteFile(filepath.Join(root, ".tsma"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	chdirTo(t, root)
+	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed {
+		t.Fatal("a coverage-tool error after a passing run must set TestFailed")
+	}
+	if m.Report != nil {
+		t.Fatalf("no report must be set on a coverage error, got %+v", m.Report)
+	}
+}
+
+func TestPrepare_RunnerErrorFromUnreadableFallback(t *testing.T) {
+	// The conventional foo_test.go exists on disk as a DIRECTORY: no test
+	// references Foo, so content-aware matching misses and the file-name fallback
+	// attributes foo_test.go with nil TestFuncs. The runner then tries to read it
+	// to extract test funcs and the read fails (it is a directory) -> runner.Run
+	// returns a non-nil error, which Prepare surfaces as TestFailed (G-001).
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":     "module runerr\n\ngo 1.22\n",
+		"pkg/foo.go": "package pkg\n\nfunc Foo() int { return 1 }\n",
+	})
+	if err := os.MkdirAll(filepath.Join(root, "pkg", "foo_test.go"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	chdirTo(t, root)
+	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed || m.FailOutput == "" {
+		t.Fatalf("a runner error must surface as TestFailed with output, got %+v", m)
+	}
+}
+
+func TestPrepare_LoopModeWriteError(t *testing.T) {
+	// Loop mode with a brand-new non-Go function: testTargetPath derives the
+	// canonical test path, but that path is occupied by a directory so the
+	// generated-test write fails -> Prepare surfaces it as TestFailed (never
+	// silent). Non-Go keeps Prepare on the disk-write branch (Go uses overlay).
+	root := t.TempDir()
+	appDir := filepath.Join(root, "app")
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "service.py"), []byte("def do_work():\n    return 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Occupy the canonical test path with a directory so the write fails.
+	if err := os.MkdirAll(filepath.Join(appDir, "test_service.py"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fn := model.Function{QualifiedName: "app.do_work", Name: "do_work", File: filepath.Join("app", "service.py"), StartLine: 1, EndLine: 2}
+	s := quest.New()
+	s.SetMeta(quest.MetaLoop, true)
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "python", root, fn), []byte("ignored"))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed || m.FailOutput == "" {
+		t.Fatalf("a generated-test write failure must surface as TestFailed, got %+v", m)
+	}
+}
+
 func TestPrepare_NonGoSkipsSmellScan(t *testing.T) {
 	// A non-Go (Python) function matched by file name: the smell scan (Go-only)
 	// is skipped and the Python runner executes. The deliberately failing test

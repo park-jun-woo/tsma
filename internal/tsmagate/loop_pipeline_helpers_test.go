@@ -160,6 +160,61 @@ func TestMeasureLoop_CoverageError(t *testing.T) {
 	}
 }
 
+// TestMeasureLoop_VacuousZeroCoverDowngraded (C1) drives measureLoop's
+// vacuous-pass guard directly: a test that compiles and exits 0 but never calls
+// the target measures 0% coverage, so measureLoop downgrades it to TestFailed
+// with the dedicated "exercises"/"covers 0%" Fact and leaves no Report.
+func TestMeasureLoop_VacuousZeroCoverDowngraded(t *testing.T) {
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":          "module mlvac\n\ngo 1.22\n",
+		"pkg/classify.go": classifySrc,
+		// Compiles and passes but never calls Classify -> 0% of the target.
+		"pkg/classify_test.go": "package pkg\n\nimport \"testing\"\n\nfunc TestClassify(t *testing.T) {\n\tif 1+1 != 2 {\n\t\tt.Fatal(\"x\")\n\t}\n}\n",
+	})
+	chdirTo(t, root)
+	p := funcPayload{Lang: "go", Root: root, Fn: model.Function{
+		QualifiedName: "pkg.Classify", Name: "Classify",
+		File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8,
+	}}
+	tm := match.TestMatch{Files: []string{filepath.Join("pkg", "classify_test.go")}, TestFuncs: []string{"TestClassify"}}
+	m := &measurement{}
+	measureLoop(m, p, tm)
+	if !m.TestFailed {
+		t.Fatal("a zero-coverage pass must be downgraded to TestFailed")
+	}
+	if m.Report != nil {
+		t.Fatalf("a vacuous pass must carry no Report, got %+v", m.Report)
+	}
+	if !strings.Contains(m.FailExpected, "exercises") || !strings.Contains(m.FailOutput, "covers 0%") {
+		t.Fatalf("expected the dedicated 0%% Fact, got Expected=%q Output=%q", m.FailExpected, m.FailOutput)
+	}
+}
+
+// TestPrepareLoopGo_MalformedName (C1) drives prepareLoopGo's pre-measure name
+// guard directly: a parseable test whose name is malformed (lowercase rune after
+// "Test", which go test silently skips) is rejected before any measurement, with
+// a name-specific Fact and no Report.
+func TestPrepareLoopGo_MalformedName(t *testing.T) {
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":          "module plgmal\n\ngo 1.22\n",
+		"pkg/classify.go": classifySrc,
+	})
+	chdirTo(t, root)
+	p := funcPayload{Lang: "go", Root: root, Fn: model.Function{
+		QualifiedName: "pkg.Classify", Name: "Classify",
+		File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8,
+	}}
+	it := &quest.Item{Key: "pkg.Classify"}
+	malformed := "package pkg\n\nimport \"testing\"\n\nfunc TestclassifyBad(t *testing.T) {\n\t_ = Classify(1)\n}\n"
+	m := prepareLoopGo(it, p, []byte(malformed))
+	if !m.TestFailed || m.Report != nil {
+		t.Fatalf("a malformed test name must be rejected pre-measure (TestFailed, no Report), got %+v", m)
+	}
+	if !strings.Contains(m.FailExpected, "well-formed") || !strings.Contains(m.FailOutput, "TestclassifyBad") {
+		t.Fatalf("expected a name-specific malformed Fact, got Expected=%q Output=%q", m.FailExpected, m.FailOutput)
+	}
+}
+
 func TestPromoteBacking_ReadError(t *testing.T) {
 	root := writeGoPkg(t, map[string]string{
 		"go.mod":     "module pbread\n\ngo 1.22\n",
@@ -236,6 +291,11 @@ func TestFinalizeBacking_MaterializesOnPass(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "pkg", "foo_test.go")); err != nil {
 		t.Fatalf("a passing terminal result must materialize to the canonical path: %v", err)
 	}
+	// C2: the materialize path promotes (copies) then deletes the backing — the
+	// canonical file is the real artifact, no scratch is left behind.
+	if _, err := os.Stat(filepath.Join(root, backingRel)); !os.IsNotExist(err) {
+		t.Fatalf("backing must be removed after promote, stat err = %v", err)
+	}
 }
 
 func TestFinalizeBacking_DiscardsOnFinalFailure(t *testing.T) {
@@ -255,21 +315,29 @@ func TestFinalizeBacking_DiscardsOnFinalFailure(t *testing.T) {
 	}
 }
 
-func TestFinalizeBacking_KeepsBackingMidLoop(t *testing.T) {
+func TestFinalizeBacking_CleansBackingMidLoop(t *testing.T) {
 	root := writeGoPkg(t, map[string]string{
 		"go.mod":     "module fbkeep\n\ngo 1.22\n",
 		"pkg/foo.go": "package pkg\n\nfunc Foo() int { return 1 }\n",
 	})
 	backingRel := filepath.Join(".tsma", "test", "gen.go")
+	overlayRel := filepath.Join(".tsma", "test", "overlay.json")
 	if err := writeTestFile(root, backingRel, "package pkg\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeTestFile(root, overlayRel, "{}"); err != nil {
 		t.Fatal(err)
 	}
 	p := funcPayload{Lang: "go", Root: root, Fn: model.Function{File: filepath.Join("pkg", "foo.go")}}
 	m := &measurement{TestFailed: true}
-	// A non-final failing try keeps the backing (a retry is coming).
+	// C2: a non-final failing try still sweeps the scratch — backing is
+	// measurement-only and the retry Render reads only the canonical on-disk test.
 	finalizeBacking(p, &quest.Item{Tries: 0}, m, backingRel)
-	if _, err := os.Stat(filepath.Join(root, backingRel)); err != nil {
-		t.Fatalf("a mid-loop failing backing must be kept: %v", err)
+	if _, err := os.Stat(filepath.Join(root, backingRel)); !os.IsNotExist(err) {
+		t.Fatalf("a mid-loop failing backing must be swept, stat err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, overlayRel)); !os.IsNotExist(err) {
+		t.Fatalf("the overlay JSON must be swept too, stat err = %v", err)
 	}
 	// And nothing was materialized to the source tree.
 	if _, err := os.Stat(filepath.Join(root, "pkg", "foo_test.go")); !os.IsNotExist(err) {

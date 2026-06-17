@@ -175,3 +175,122 @@ func TestPrepare_OverlayTruncatedFeedback(t *testing.T) {
 		t.Fatalf("expected the dedicated truncated Fact, got %+v", fact)
 	}
 }
+
+// tsmaTestResidue returns the names directly under root/.tsma/test (gen backings
+// and overlay JSON) — the scratch C2 must leave empty after a measurement.
+func tsmaTestResidue(t *testing.T, root string) []string {
+	t.Helper()
+	ents, err := os.ReadDir(filepath.Join(root, ".tsma", "test"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		t.Fatalf("readdir .tsma/test: %v", err)
+	}
+	var names []string
+	for _, e := range ents {
+		names = append(names, e.Name())
+	}
+	sort.Strings(names)
+	return names
+}
+
+// TestPrepare_OverlayVacuousZeroCoverNotMaterialized (C1-a) proves a generated
+// test that compiles, runs, and exits 0 but never calls the target (0% coverage)
+// is downgraded to TestFailed with the dedicated "exercises"/"covers 0%" Fact, and
+// is NOT materialized even on the final try (the *통과DONE* path requires cover>0).
+func TestPrepare_OverlayVacuousZeroCoverNotMaterialized(t *testing.T) {
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":          "module ovl\n\ngo 1.22\n",
+		"pkg/classify.go": classifySrc,
+	})
+	chdirTo(t, root)
+	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
+	it := itemWithPayload(t, "go", root, fn)
+	it.Tries = quest.MaxTries - 1 // final try: would lock *통과DONE* if accepted
+
+	noCall := "package pkg\n\nimport \"testing\"\n\nfunc TestClassify(t *testing.T) {\n\tif 1+1 != 2 {\n\t\tt.Fatal(\"x\")\n\t}\n}\n"
+	ctx, _, err := New().Prepare(loopSession(), it, []byte(noCall))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed {
+		t.Fatal("a zero-coverage pass must be downgraded to TestFailed")
+	}
+	if m.Report != nil {
+		t.Fatalf("a downgraded vacuous pass must carry no Report, got %+v", m.Report)
+	}
+	fired, fact := testsMustPass.Check(gate.Context{Submission: m})
+	if !fired {
+		t.Fatal("tests-must-pass must fire on a vacuous (0%) pass")
+	}
+	if !strings.Contains(fact.Expected, "exercises") || !strings.Contains(fact.Actual, "covers 0%") {
+		t.Fatalf("expected the dedicated 0%% Fact, got %+v", fact)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "pkg", "classify_test.go")); !os.IsNotExist(statErr) {
+		t.Fatalf("a vacuous pass must not materialize even on the final try, stat err = %v", statErr)
+	}
+}
+
+// TestPrepare_OverlayMalformedTestNameRejected (C1-b) proves a malformed test name
+// (`TestpyIndent` — lowercase after "Test", which go test silently ignores) is
+// rejected before measurement with a clear name-specific Fact.
+func TestPrepare_OverlayMalformedTestNameRejected(t *testing.T) {
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":          "module ovl\n\ngo 1.22\n",
+		"pkg/classify.go": classifySrc,
+	})
+	chdirTo(t, root)
+	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
+
+	malformed := "package pkg\n\nimport \"testing\"\n\nfunc TestpyIndent(t *testing.T) {\n\t_ = Classify(1)\n}\n"
+	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(malformed))
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed || m.Report != nil {
+		t.Fatalf("a malformed test name must be rejected pre-measure (TestFailed, no Report), got %+v", m)
+	}
+	fired, fact := testsMustPass.Check(gate.Context{Submission: m})
+	if !fired || !strings.Contains(fact.Actual, "TestpyIndent") || !strings.Contains(fact.Actual, "malformed") {
+		t.Fatalf("expected a name-specific malformed Fact, got fired=%v %+v", fired, fact)
+	}
+	// Pre-measure reject writes no backing, so .tsma/test stays empty.
+	if r := tsmaTestResidue(t, root); len(r) != 0 {
+		t.Fatalf("a pre-measure reject must leave no .tsma/test residue, got %v", r)
+	}
+}
+
+// TestPrepare_OverlayNoResidueAfterMeasure (C2) proves every overlay measurement
+// path leaves .tsma/test empty: the materialize path (full cover, final try) and
+// the retry path (partial cover, mid-loop) both sweep the backing and overlay JSON.
+func TestPrepare_OverlayNoResidueAfterMeasure(t *testing.T) {
+	cases := []struct {
+		name  string
+		tries int
+		raw   string
+	}{
+		{"materialize", quest.MaxTries - 1, classifyFullTest},
+		{"retry", 0, classifyPartialTest},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := writeGoPkg(t, map[string]string{
+				"go.mod":          "module ovl\n\ngo 1.22\n",
+				"pkg/classify.go": classifySrc,
+			})
+			chdirTo(t, root)
+			fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
+			it := itemWithPayload(t, "go", root, fn)
+			it.Tries = c.tries
+			if _, _, err := New().Prepare(loopSession(), it, []byte(c.raw)); err != nil {
+				t.Fatalf("Prepare: %v", err)
+			}
+			if r := tsmaTestResidue(t, root); len(r) != 0 {
+				t.Fatalf("measurement must leave no .tsma/test residue, got %v", r)
+			}
+		})
+	}
+}
