@@ -1,6 +1,6 @@
 # tsma
 
-[![Version](https://img.shields.io/badge/version-v0.4.1-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
+[![Version](https://img.shields.io/badge/version-v0.5.0-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
 
@@ -182,7 +182,7 @@ If no `.tsmignore` exists, tsma uses built-in defaults only (`vendor/`, `.git/`,
 | TypeScript | `package.json` | regex | `npx vitest` / `npx jest` | `c8` / `istanbul` | Node.js |
 | Python | `pyproject.toml` / `requirements.txt` / `setup.py` | regex | `pytest` | `coverage.py` | Python + pytest |
 | Rust | `Cargo.toml` | regex | `cargo test` | `cargo llvm-cov` (llvm-cov) | cargo + `cargo-llvm-cov` (`llvm-tools-preview`) |
-| Java | `pom.xml` / `build.gradle` / `build.gradle.kts` | regex | `mvn -Dtest=…` / `gradle test --tests` | JaCoCo (`jacoco.xml`) | JDK + Maven or Gradle + JaCoCo plugin |
+| Java | `pom.xml` / `build.gradle` / `build.gradle.kts` | regex | `mvn -Dtest=…` / `gradle test --tests`, module-aware (runs in the nearest submodule) | JaCoCo (`jacoco.xml`), read from the submodule's report | JDK + Maven or Gradle + JaCoCo plugin |
 | C# | `*.csproj` / `*.sln` / `Directory.Build.props` | regex | `dotnet test --filter` | Cobertura via coverlet | .NET SDK + coverlet (`coverlet.collector`) |
 
 ## For LLM agents
