@@ -12,6 +12,14 @@ import (
 )
 
 // Check runs pytest with coverage and parses the results.
+//
+// SSOT note (Phase006/D2): this stage assumes pytest unconditionally and is
+// already correct for pytest projects, so its execution path is unchanged. The
+// single source of truth for "is this a pytest project?" is
+// detect.DetectPytest, which the runner stage now also uses. Should a future
+// non-pytest coverage branch be added here, it must gate on detect.DetectPytest
+// so the runner and coverage stages stay in agreement (the asymmetry behind
+// BUG-001).
 func (c *PyChecker) Check(projectRoot string, m match.TestMatch, fn *model.Function) (*Report, error) {
 	testFile := testFileFromMatch(m)
 	// Validate the path is resolvable (e.g. cwd still exists), but pass the

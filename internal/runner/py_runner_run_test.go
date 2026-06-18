@@ -3,6 +3,7 @@ package runner
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -73,5 +74,29 @@ func TestPyRunnerRun_unittestBranchFail(t *testing.T) {
 	}
 	if res.Pass {
 		t.Error("expected Pass=false when python exits non-zero")
+	}
+	// D3: a failed unittest fallback prepends the diagnostic hint.
+	if !strings.HasPrefix(res.Output, pyFallbackHint) {
+		t.Errorf("expected fallback hint prepended, got: %q", res.Output)
+	}
+}
+
+// TestPyRunnerRun_unittestBranchPassQuiet verifies D3 stays quiet on a
+// successful unittest fallback: no diagnostic hint is added.
+func TestPyRunnerRun_unittestBranchPassQuiet(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "test_x.py"), []byte("# noop\n"), 0o644)
+	fakePython(t, "echo ok\nexit 0\n")
+
+	r := &PyRunner{}
+	res, err := r.Run(dir, mkMatch("test_x.py"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.Pass {
+		t.Errorf("expected Pass=true, output: %s", res.Output)
+	}
+	if strings.Contains(res.Output, pyFallbackHint) {
+		t.Errorf("expected no hint on success, got: %q", res.Output)
 	}
 }
