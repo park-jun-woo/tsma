@@ -87,6 +87,44 @@ func TestJavaRunnerRunToolNotFound(t *testing.T) {
 	}
 }
 
+// TestJavaRunnerRunSubmoduleDir is the core BUG-004 fix: when the test file
+// lives in a submodule with its own pom.xml (not in the root reactor), the
+// runner must execute in the submodule directory, not the project root. The
+// fake mvn records its working directory so we can assert on it.
+func TestJavaRunnerRunSubmoduleDir(t *testing.T) {
+	dir := mavenProject(t)
+	sub := filepath.Join(dir, "examples")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pwdFile := filepath.Join(t.TempDir(), "pwd")
+	installFakeJavaTool(t, "mvn", "pwd > '"+pwdFile+"'\nexit 0\n")
+
+	r := &JavaRunner{}
+	if _, err := r.Run(dir, mkMatch("examples/src/test/java/p/FooTest.java")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got, err := os.ReadFile(pwdFile)
+	if err != nil {
+		t.Fatalf("read pwd file: %v", err)
+	}
+	gotDir, err := filepath.EvalSymlinks(strings.TrimSpace(string(got)))
+	if err != nil {
+		t.Fatalf("eval pwd: %v", err)
+	}
+	wantDir, err := filepath.EvalSymlinks(sub)
+	if err != nil {
+		t.Fatalf("eval sub: %v", err)
+	}
+	if gotDir != wantDir {
+		t.Errorf("mvn ran in %q, want submodule dir %q", gotDir, wantDir)
+	}
+}
+
 func TestJavaRunnerImplementsRunner(t *testing.T) {
 	var _ Runner = &JavaRunner{}
 }

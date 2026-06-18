@@ -114,6 +114,43 @@ exit 0
 	}
 }
 
+// TestJavaCheckerCheckSubmodule is the coverage side of the BUG-004 fix: the
+// target function lives in a submodule with its own pom.xml. The checker must
+// (a) run mvn in the submodule and (b) read the JaCoCo report from the
+// submodule's target/, not the project root. The fake mvn writes the fixture
+// relative to its cwd; success therefore proves both the run dir and the report
+// path were resolved to the same submodule root.
+func TestJavaCheckerCheckSubmodule(t *testing.T) {
+	fixtureAbs, err := filepath.Abs(jacocoFixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proj := fakeMaven(t, `
+mkdir -p target/site/jacoco
+cat "`+fixtureAbs+`" > target/site/jacoco/jacoco.xml
+exit 0
+`)
+	// Add a submodule with its own pom.xml; the root has no jacoco report, so a
+	// regression that read the report from projectRoot would fail to parse.
+	sub := filepath.Join(proj, "examples")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c := &JavaChecker{}
+	report, err := c.Check(proj, mkMatch("examples/src/test/java/com/example/CalculatorTest.java"),
+		&model.Function{File: "examples/src/main/java/com/example/Calculator.java", Name: "classify", StartLine: 9, EndLine: 12})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report == nil {
+		t.Fatal("expected non-nil report")
+	}
+}
+
 func TestJavaCheckerImplementsChecker(t *testing.T) {
 	var _ Checker = &JavaChecker{}
 }

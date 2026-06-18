@@ -7,6 +7,7 @@ import (
 
 	"github.com/park-jun-woo/tsma/internal/match"
 	"github.com/park-jun-woo/tsma/internal/model"
+	"github.com/park-jun-woo/tsma/internal/runner"
 )
 
 // Check runs the project's tests with JaCoCo (via Maven or Gradle) and maps the
@@ -15,9 +16,10 @@ import (
 // The match is unused: JaCoCo measures the whole test run regardless of the
 // matched file (behavior unchanged).
 func (c *JavaChecker) Check(projectRoot string, _ match.TestMatch, fn *model.Function) (*Report, error) {
-	buildTool := detectJavaBuildTool(projectRoot)
+	moduleRoot := runner.NearestModuleRoot(projectRoot, fn.File)
+	buildTool := detectJavaBuildTool(moduleRoot)
 	if buildTool == "" {
-		return nil, fmt.Errorf("no java build tool detected: expected pom.xml (Maven) or build.gradle(.kts) (Gradle) in %s", projectRoot)
+		return nil, fmt.Errorf("no java build tool detected: expected pom.xml (Maven) or build.gradle(.kts) (Gradle) in %s", moduleRoot)
 	}
 
 	bin, err := findJavaTool(projectRoot, buildTool)
@@ -26,11 +28,11 @@ func (c *JavaChecker) Check(projectRoot string, _ match.TestMatch, fn *model.Fun
 	}
 
 	args := buildJavaCoverageArgs(buildTool)
-	if err := runJavaCoverage(bin, projectRoot, args); err != nil {
+	if err := runJavaCoverage(bin, moduleRoot, args); err != nil {
 		return nil, fmt.Errorf("java coverage failed: %w", err)
 	}
 
-	reportPath := jacocoReportPath(projectRoot, buildTool)
+	reportPath := jacocoReportPath(moduleRoot, buildTool)
 	cov, err := parseJacoco(reportPath)
 	if err != nil {
 		return nil, fmt.Errorf("parse jacoco xml: %w", err)

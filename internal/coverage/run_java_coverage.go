@@ -8,11 +8,13 @@ import (
 )
 
 // runJavaCoverage runs the build tool (mvn/gradle) with the coverage arguments
-// in projectRoot, producing a JaCoCo XML report. A working JDK + build tool +
-// JaCoCo plugin is required (E2E only; not exercised in sandbox environments).
-func runJavaCoverage(bin, projectRoot string, args []string) error {
+// in moduleRoot (the build-module directory resolved by NearestModuleRoot;
+// equal to projectRoot for single-module projects), producing a JaCoCo XML
+// report. A working JDK + build tool + JaCoCo plugin is required (E2E only; not
+// exercised in sandbox environments).
+func runJavaCoverage(bin, moduleRoot string, args []string) error {
 	cmd := exec.Command(bin, args...)
-	cmd.Dir = projectRoot
+	cmd.Dir = moduleRoot
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

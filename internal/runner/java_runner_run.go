@@ -19,9 +19,10 @@ import (
 // project wrapper), and runs only the single test class.
 func (r *JavaRunner) Run(projectRoot string, m match.TestMatch) (*Result, error) {
 	testFile := testFileFromMatch(m)
-	buildTool := detectJavaBuildTool(projectRoot)
+	moduleRoot := NearestModuleRoot(projectRoot, testFile)
+	buildTool := detectJavaBuildTool(moduleRoot)
 	if buildTool == "" {
-		return nil, fmt.Errorf("no java build tool detected: expected pom.xml (Maven) or build.gradle(.kts) (Gradle) in %s", projectRoot)
+		return nil, fmt.Errorf("no java build tool detected: expected pom.xml (Maven) or build.gradle(.kts) (Gradle) in %s", moduleRoot)
 	}
 
 	bin, err := findJavaTool(projectRoot, buildTool)
@@ -31,7 +32,7 @@ func (r *JavaRunner) Run(projectRoot string, m match.TestMatch) (*Result, error)
 
 	args := buildJavaTestArgs(buildTool, javaTestClass(testFile))
 	cmd := exec.Command(bin, args...)
-	cmd.Dir = projectRoot
+	cmd.Dir = moduleRoot
 
 	output, err := cmd.CombinedOutput()
 	result := &Result{
