@@ -65,7 +65,10 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 			m.FailOutput = err.Error()
 			return gate.Context{Item: it, Submission: m}, nil, nil
 		}
-		if err := writeTestFile(p.Root, path, sanitizeSource(p.Lang, string(raw))); err != nil {
+		// BUG-002: accumulate per-function (QualifiedName) marker block instead of a
+		// whole-file overwrite (Java/C# write path; promoteMerged merges this fn's
+		// block into whatever is at `path` and writes verbatim — markers survive).
+		if err := promoteMerged(p.Root, path, sanitizeSource(p.Lang, string(raw)), fn.QualifiedName, p.Lang); err != nil {
 			m.TestFailed = true
 			m.FailOutput = err.Error()
 			return gate.Context{Item: it, Submission: m}, nil, nil

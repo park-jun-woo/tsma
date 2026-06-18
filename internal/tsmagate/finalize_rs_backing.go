@@ -6,6 +6,12 @@ import "github.com/park-jun-woo/reins/pkg/quest"
 
 // finalizeRsBacking keeps the injected source on a terminal pass and otherwise
 // rolls it back from the backing, always sweeping the .tsma/test scratch.
+//
+// BUG-002 / Phase 007: Rust is NOT a target of the canonical promote-accumulation
+// engine (mergeCanonical). Its unit tests are injected into an in-file
+// #[cfg(test)] mod, so multiple functions' tests accumulate naturally in one mod
+// (no separate canonical file to overwrite). This handler therefore stays
+// unchanged — no promoteMerged here on purpose.
 func finalizeRsBacking(p funcPayload, it *quest.Item, m *measurement, backingRel string) {
 	if !shouldMaterialize(m, it) {
 		if err := restoreRsSource(p, backingRel); err != nil {

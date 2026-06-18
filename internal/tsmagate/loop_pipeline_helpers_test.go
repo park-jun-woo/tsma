@@ -270,8 +270,18 @@ func TestPromoteBacking_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("canonical test file must exist after promote: %v", err)
 	}
-	if string(got) != body {
-		t.Fatalf("canonical content mismatch:\n%s", got)
+	// BUG-002: promote now accumulates per-function (marker-wrapped block) rather
+	// than writing the raw body verbatim. The header and the test body must both
+	// survive, now bounded by tsma:begin/end markers.
+	gs := string(got)
+	if !strings.Contains(gs, "func TestFoo(t *testing.T) { _ = Foo() }") {
+		t.Fatalf("test body must survive accumulation:\n%s", gs)
+	}
+	if !strings.Contains(gs, "import \"testing\"") {
+		t.Fatalf("header must survive accumulation:\n%s", gs)
+	}
+	if !strings.Contains(gs, "tsma:begin fn=") || !strings.Contains(gs, "tsma:end fn=") {
+		t.Fatalf("accumulated block must carry markers:\n%s", gs)
 	}
 }
 
