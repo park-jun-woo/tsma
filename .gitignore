@@ -11,3 +11,5 @@
 # reins 런타임 산출물
 /session.json
 /tsma-results.jsonl
+# 테스트 픽스처(로컬 전용)
+/testdata/
