@@ -91,9 +91,9 @@ exit 0
 	}
 }
 
-// TestCsCheckerCheckMkdirFails covers the MkdirAll error branch: dotnet is on
-// PATH, but the project's .tsma path already exists as a regular file, so
-// creating .tsma/coverage underneath it fails.
+// TestCsCheckerCheckMkdirFails covers the coverage-dir preparation error branch:
+// dotnet is on PATH, but the project's .tsma path already exists as a regular
+// file, so clearing/creating .tsma/coverage underneath it fails.
 func TestCsCheckerCheckMkdirFails(t *testing.T) {
 	binDir := t.TempDir()
 	bin := filepath.Join(binDir, "dotnet")
@@ -114,8 +114,8 @@ func TestCsCheckerCheckMkdirFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when .tsma coverage dir cannot be created")
 	}
-	if !strings.Contains(err.Error(), "create .tsma coverage dir") {
-		t.Errorf("expected 'create .tsma coverage dir', got: %v", err)
+	if !strings.Contains(err.Error(), ".tsma coverage dir") {
+		t.Errorf("expected '.tsma coverage dir' error, got: %v", err)
 	}
 }
 

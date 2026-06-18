@@ -23,6 +23,14 @@ func (c *CsChecker) Check(projectRoot string, _ match.TestMatch, fn *model.Funct
 	}
 
 	resultsDir := filepath.Join(projectRoot, ".tsma", "coverage")
+	// coverlet's XPlat collector writes each run into a fresh <guid>/ subdir and
+	// never overwrites prior reports. findCoberturaReport returns the first match
+	// in lexical order, so a stale report from an earlier attempt would be read
+	// instead of this run's output. Clear the dir so only the current run's
+	// report remains.
+	if err := os.RemoveAll(resultsDir); err != nil {
+		return nil, fmt.Errorf("clear .tsma coverage dir: %w", err)
+	}
 	if err := os.MkdirAll(resultsDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create .tsma coverage dir: %w", err)
 	}
