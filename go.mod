@@ -2,7 +2,7 @@ module github.com/park-jun-woo/tsma
 
 go 1.22
 
-require github.com/park-jun-woo/reins v0.2.1
+require github.com/park-jun-woo/reins v0.2.2
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
