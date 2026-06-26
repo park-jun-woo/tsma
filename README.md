@@ -4,13 +4,13 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
 
-Regression defense for legacy code. Indexes every function, detects missing tests, measures branch coverage, and guides LLM agents to fill the gaps — one function at a time.
+Regression defense for legacy code. Built on the [reins](https://github.com/park-jun-woo/reins) deterministic quest gate. Indexes every function, detects missing tests, measures branch coverage, and drives LLM agents to fill the gaps — one function at a time or in an unattended loop.
 
 ## What tsma does
 
 1. **Shows where tests are missing.** Indexes every function, matches against test files by convention, and tells you exactly which functions have no tests.
 2. **Uncovered branch feedback makes LLM tests dramatically better.** Without feedback, LLM writes 60-70% coverage. With specific line numbers ("line 41, 44, 70 uncovered"), LLM reaches 100% in one shot.
-3. **Single-command loop for LLM agents.** `tsma next` handles detection, test execution, coverage measurement, and progress tracking. The agent just repeats one command until done.
+3. **Unattended loop for LLM agents.** `tsma scan .` indexes functions, then `tsma loop` drives the full generate / gate / retry cycle — no human interaction needed. For manual control, use `tsma next` and `tsma submit`.
 
 Validated on a real project (527 functions): 246 reached 100% (PASS), 281 accepted at best-effort (DONE), 0 remaining (TODO).
 
@@ -28,91 +28,94 @@ go install github.com/park-jun-woo/tsma/cmd/tsma@latest
 
 ## How it works
 
-`tsma next` is the only command you need. It drives the entire loop:
+### Unattended (recommended)
 
-```
-$ tsma next          # shows the next function without a test
-  → write a test
-$ tsma next          # detects the new test, runs it, measures coverage
-  → 100%? PASS, moves to next function
-  → <100%? shows uncovered branches, gives you one more shot
-$ tsma next          # re-measures after your fix
-  → improved or not, marks DONE, moves on
+```bash
+tsma scan .           # index all functions, seed TODO items
+tsma loop             # LLM generates tests, gate verifies, retries on FAIL
 ```
 
-Repeat until `All functions complete!`.
+The loop picks each TODO function, generates a test via LLM (`claude:sonnet` by default), runs the test, measures branch coverage, and locks PASS at 100%. On FAIL it feeds back uncovered lines and retries (up to 3 attempts per function).
+
+### Manual (agent-driven)
+
+```bash
+tsma scan .                            # index all functions (once)
+tsma next                              # shows next TODO + authoring prompt
+# write the test file to disk
+tsma submit --key <FunctionName> --in <test_file>
+# PASS (100%) → locked, or FAIL (with uncovered line feedback)
+tsma next                              # next function
+```
+
+Repeat `next` / write / `submit` until `tsma status` shows all complete.
 
 ## Commands
 
-```
-tsma next              the entire workflow (detect → test → coverage → advance)
-tsma list [--page N]   all functions with status
-tsma status            progress summary
-tsma rescan            re-sync the function set with current source (keeps progress)
-tsma reset --all       delete session
-```
+| Command | Purpose |
+|---|---|
+| `tsma scan [dir]` | Index functions in the project, seed TODO items (default `.`) |
+| `tsma next` | Show the next TODO function with authoring prompt |
+| `tsma submit --key <key> --in <file>` | Submit a test; gate evaluates and returns a verdict |
+| `tsma status` | Progress tally (TODO/PASS/REVIEW/DONE) |
+| `tsma export` | Emit terminal results as JSONL |
+| `tsma rules` | Show the gate's violation-rule catalog |
+| `tsma loop [--model backend:model] [--max-items N]` | Unattended generate / gate / retry loop |
 
 ## Status
 
 | Status | Meaning |
 |---|---|
-| **TODO** | no test file, or coverage < 100% and due this round |
-| **DONE** | not 100% but best effort this round |
-| **PASS** | 100% branch coverage |
+| **TODO** | Not yet verified — needs a test |
+| **PASS** | 100% branch coverage, locked by gate (irreversible) |
+| **REVIEW** | 100% coverage but test uses escape hatches (unsafe, reflect, etc.) — needs human review |
+| **DONE** | Max retries (3) reached without PASS — auto-accepted |
 
 ## Example session
 
-```
-$ tsma next
+Scan the project to seed TODO items:
 
-No session found. Analyzing project...
+```
+$ tsma scan .
 Detected: go
-Found 527 functions
-Session created.
+Indexed 527 functions
+```
 
+View the next TODO function:
+
+```
+$ tsma next
 Login  TODO
-  file: internal/api/auth/handler.go:86-119
-  test: internal/api/auth/handler_test.go (not found)
+  Source: internal/api/auth/handler.go:86-119
 ```
 
-After writing a test:
+After writing a test and submitting:
 
 ```
-$ tsma next
-
-Login  testing...
-  [1/2] go test: PASS
-  [2/2] coverage: 100% (9/9)
-PASS ✓
-
-GetProfile  TODO
-  file: internal/api/auth/handler.go:121-148
-  test: (not found)
+$ tsma submit --key Login --in internal/api/auth/handler_test.go
+PASS  Login  (100% branch coverage)
 ```
 
-When coverage is not 100%:
+When coverage is not 100%, the verdict carries uncovered line locations:
 
 ```
-$ tsma next
-
-ListContracts  testing...
-  [1/2] go test: PASS
-  [2/2] coverage: 65% (11/17)
-  UNCOVERED:
-    line 41 — if params.Status != nil
-    line 44 — if params.BuildingId != nil
-    line 70 — if err != nil (CountSummary)
-  ▶ Cover the uncovered branches.
-  ▶ After completing the test, run `tsma next`.
+$ tsma submit --key ListContracts --in internal/api/contract/handler_test.go
+FAIL  branch-coverage-below-100
+  where: handler.go:41, handler.go:44, handler.go:70
+  expected: 100% branch coverage
+  actual: 65.0% (3 uncovered branch(es))
 ```
+
+The agent sees exactly which lines to cover, fixes the test, and submits again.
 
 ## Principles
 
 1. **Convention-based test matching.** Go: `handler.go` → `handler_test.go` in the same directory. TS: `.test.ts` / `.spec.ts`. Python: `test_` prefix. Rust: in-file `#[cfg(test)] mod tests` or `tests/*.rs`. Java: `src/main/java/…/Foo.java` → `src/test/java/…/FooTest.java`. C#: `Foo.cs` → `FooTests.cs` / `FooTest.cs` (incl. `*.Tests/` projects).
-2. **Session is cache, source files are truth.** Every `tsma next` (and `tsma status`) re-scans the source and reconciles the function set: functions added or extracted since the last index surface as TODO, deleted functions are dropped, and existing progress is preserved. So a refactor that adds functions can never leave a stale "All functions complete!" — and if a test file is deleted, the function reverts to TODO regardless of what session.json says. Use `tsma rescan` to force this sync without touching progress (unlike `tsma reset --all`).
+2. **Deterministic gate, irreversible ratchet.** Only the machine locks PASS (authority asymmetry). Once PASS, it is irreversible — remaining work monotonically decreases. The gate evaluates from disk truth: matched tests are re-run and re-measured on every submit.
 3. **Generated code is excluded.** `*_gen.go`, `*.pb.go` are not indexed.
 4. **`.tsmignore` for custom exclusions.** Place a `.tsmignore` file in the project root to exclude paths from indexing. Same syntax as `.gitignore`.
-5. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after one retry.
+5. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after 3 retries.
+6. **Escape-hatch detection.** Tests that reach 100% coverage by cheating (unsafe, reflect, linkname, `as any`, etc.) are flagged REVIEW for human inspection rather than silently locked as PASS.
 
 ## Why some functions can't reach 100%
 
@@ -146,7 +149,7 @@ type Handler struct {
 
 The real implementation runs with all its internal dependencies (DB, external APIs). You cannot make it return a specific error or a specific result. Branches that depend on those outcomes are unreachable in unit tests.
 
-**tsma's response:** After one retry with uncovered branch feedback, tsma marks the function as DONE with the achieved coverage. This is not a tool limitation — it reflects the code's testability. Introducing an interface (DI) would make the function fully testable, but that requires modifying the source code.
+**tsma's response:** After 3 retries with uncovered branch feedback, tsma marks the function as DONE with the achieved coverage. This is not a tool limitation — it reflects the code's testability. Introducing an interface (DI) would make the function fully testable, but that requires modifying the source code.
 
 ## .tsmignore
 
@@ -187,12 +190,15 @@ If no `.tsmignore` exists, tsma uses built-in defaults only (`vendor/`, `.git/`,
 
 ## For LLM agents
 
-Just run `tsma next`. The output tells the agent exactly what to do and when to run `tsma next` again. The loop continues until "All functions complete!".
+**Unattended:** `tsma scan .` then `tsma loop` — the loop handles generation, verification, retry, and progress automatically.
 
-## Reports
+**Manual:** `tsma scan .` then repeat `tsma next` / write test / `tsma submit --key <key> --in <file>` until `tsma status` shows all complete.
+
+## Reports (pre-reins runs)
 
 - [REPORT.md](REPORT.md) — tsma self-test (115 functions, PASS 87, DONE 28, coverage 95%)
 - [REPORT.juicer.md](REPORT.juicer.md) — juicer project test (140 functions, PASS 114, DONE 26, coverage 96%)
+- [REPORT.gozhip.md](REPORT.gozhip.md) — gozhip project (527 functions)
 
 ## Caveat
 
