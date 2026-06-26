@@ -15,7 +15,7 @@ import (
 func main() {
 	def := tsmagate.New()
 	cli.NewQuestCmd("tsma", def, cli.Options{
-		Version: "0.5.0",
+		Version: "0.5.1",
 		Loop:    tsmagate.LoopOptions(),
 	}).Execute()
 }
