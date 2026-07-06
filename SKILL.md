@@ -4,7 +4,7 @@ description: Test coverage ratchet for Go, TypeScript, Python, Rust, Java, and C
 license: MIT
 metadata:
   author: park-jun-woo
-  version: "0.5.1"
+  version: "0.6.0"
 ---
 
 # tsma — Test Coverage Ratchet for LLM Agents
@@ -99,6 +99,20 @@ tsma's gate has two severity levels. Run `tsma rules` to see the full catalog.
 | `TS-REFL-RS-001` | Rust | `unsafe` blocks in tests |
 | `TS-REFL-RS-002` | Rust | `transmute` in tests |
 | `TS-REFL-RS-003` | Rust | Raw pointer (`std::ptr`) access in tests |
+
+### Where the gate is declared
+
+The gate's **topology** — which rules are rebuttals, what each invalidates, and the single
+exclusion edge (`tests-must-pass` supersedes `branch-coverage-below-100`) — is declared in
+`internal/tsmagate/gate.md`, a [TANGEUL](https://github.com/park-jun-woo/reins) judgment
+document. Two audit surfaces stay in sync:
+
+- **`tsma rules` catalog** — each rule's ID, severity **level**, and description.
+- **`gate.md`** — each rule's **topology and priority** (general vs rebuttal, invalidates, excludes).
+
+Only the judgment topology is declarative. The `Prepare` step (run tests, measure branch
+coverage) stays in Go, and the rule predicates are unchanged Go functions bound to the document
+by symbol.
 
 ## Key Insight: Coverage Feedback Changes Everything
 

@@ -214,3 +214,36 @@ reins 포팅 시 **추가 `gate.Rule`로 자연스럽게 편입**되며 `LevelRe
   Prepare에서 도구 실행 후 `gate.Context`에 결과 주입, 룰은 순수 유지.
 - **신규 능력**: `Options{Loop}`+`pkg/llm`(`claude:opus` 등)로 무인 구동(LLM 생성→게이트 판정→재시도)
   — tsma가 현재 미보유.
+
+---
+
+## 8. TANGEUL 매핑 — 레거시 → gate.Rule → gate.md 노드
+
+§2·§6의 레거시 판정 로직은 이제 `internal/tsmagate/gate.md`(TANGEUL 판정 문서)로 **위상**이
+선언된다. 술어 본문(`rule_*.go`)은 무변경이고, 문서는 15개 규칙의 위상(일반/반박)·레벨(실패/검토)·
+우선순위(무효다/배제한다)만 코드 없이 드러낸다. 아래는 레거시 ID 기준 3층 대응이다
+(이름 매핑 SSOT: `plans/tangeul/Phase002-gate-doc.md` §2).
+
+| 레거시 | gate.Rule ID | gate.md 노드(한국어 이름) | 위상 |
+|---|---|---|---|
+| §2 G-001 | `tests-must-pass` | `테스트 실패` | 실패를 보고하는 반박 규칙, `커버리지 미달` 배제 |
+| §2 G-002/G-004 | `branch-coverage-below-100` | `커버리지 미달` | 실패를 보고하는 반박 규칙 |
+| §6 TS-REFL-001 | `TS-REFL-001` | `Go 언세이프` | 검토를 보고하는 반박 규칙 |
+| §6 TS-REFL-002 | `TS-REFL-002` | `Go 리플렉트` | 〃 |
+| §6 TS-REFL-003 | `TS-REFL-003` | `Go 링크네임` | 〃 |
+| §6 TS-REFL-TS-001~003 | 동일 ID | `TS 애니 캐스트` / `TS 리플렉트` / `TS 오운 프로퍼티` | 〃 |
+| §6 TS-REFL-JV-001~002 | 동일 ID | `자바 리플렉트` / `자바 셋액세서블` | 〃 |
+| §6 TS-REFL-CS-001~002 | 동일 ID | `C샵 리플렉트` / `C샵 리플렉트 인포` | 〃 |
+| §6 TS-REFL-RS-001~003 | 동일 ID | `러스트 언세이프` / `러스트 트랜스뮤트` / `러스트 포인터` | 〃 |
+
+- **일반 규칙 `제출 유효`**: gate.md의 유일한 일반 규칙. 위 15개 반박 규칙이 전부 이 하나를
+  `무효다`로 무효화한다 — 어느 하나라도 발화하면 제출은 유효하지 않다.
+- **확정 배제 사슬(Phase003 패리티 확정본)**: `테스트 실패` → `커버리지 미달` **단일 간선 하나뿐**.
+  이는 legacy `rule_branch_coverage.go`의 `!TestFailed` Go 가드를 감사 표면에 드러낸 것이다.
+  smell 13개(TS-REFL-*)는 **배제하지 않는다** — legacy에서 smell은 TestFailed와 무관하게
+  발화·기록되므로, 배제하면 Facts가 사라져 패리티가 깨진다. 따라서 Fail 2개는 이 한 간선,
+  smell 13개는 병렬 미배제 Review이고, legacy 평탄 판정과 Outcome·RootCause·Facts가 완전 동등하다.
+- **⚠️ 경고**: `RootCause`/`RuleSystem`/`EscalateOn` 키는 **gate.Rule ID**(`tests-must-pass`,
+  `branch-coverage-below-100` 등)이며 **gate.md의 한국어 문서 이름이 아니다**. `RulePred`가
+  `RuleMeta.ID`를 승계하므로 `loop_config.go`의 `EscalateOn: ["branch-coverage-below-100"]`
+  등은 무변경이다. 문서 표시 이름(`커버리지 미달`)을 키로 쓰지 말 것.

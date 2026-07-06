@@ -1,6 +1,6 @@
 # tsma
 
-[![Version](https://img.shields.io/badge/version-v0.5.1-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
+[![Version](https://img.shields.io/badge/version-v0.6.0-blue.svg)](https://github.com/park-jun-woo/tsma/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/park-jun-woo/tsma)](https://skills.sh/park-jun-woo/tsma)
 
@@ -116,6 +116,12 @@ The agent sees exactly which lines to cover, fixes the test, and submits again.
 4. **`.tsmignore` for custom exclusions.** Place a `.tsmignore` file in the project root to exclude paths from indexing. Same syntax as `.gitignore`.
 5. **Coverage is measured, not enforced.** 100% is the goal, but unreachable branches (no DI, external dependencies) are accepted as DONE after 3 retries.
 6. **Escape-hatch detection.** Tests that reach 100% coverage by cheating (unsafe, reflect, linkname, `as any`, etc.) are flagged REVIEW for human inspection rather than silently locked as PASS.
+
+## Gate architecture
+
+The judgment layer is *declared*, not hand-coded. `internal/tsmagate/gate.md` — a [TANGEUL](https://github.com/park-jun-woo/reins) judgment document — declares the **topology** of the gate's 15 rules: which are rebuttals, what each invalidates, and the single exclusion edge (a failing test supersedes the coverage check). The rule predicates themselves are unchanged Go functions bound to the document by symbol, and the side-effect pipeline (`Prepare`: run tests, measure branch coverage) stays in Go — only the judgment topology is declarative.
+
+This yields two cross-checking audit surfaces — `tsma rules` (rule ID · severity · description) and `gate.md` (topology · priority) — so an auditor can read *what fails, what escalates to review, and what supersedes what* in one document without reading code. Seeding, the side-effect pipeline, and authoring prompts remain Go by design (the reins boundary); moving them was never the goal — only the 15 rules' phase, level, and priority became a document.
 
 ## Why some functions can't reach 100%
 
