@@ -1,5 +1,5 @@
 //ff:func feature=gate type=test
-//ff:what Prepare 통합테스트: 디스크의 테스트를 실제 재측정한다. payload 디코드 에러·무매칭(테스트없음)·Go 100% 성공(Report 채움)·테스트 실패(TestFailed)·파싱불가 테스트 fallback(smell 스캔 continue)·비-Go(smell 스킵) 분기를 임시 fixture로 덮는다.
+//ff:what Prepare 통합테스트: 디스크의 테스트를 실제 재측정한다. payload 디코드 에러·무매칭(테스트없음)·Go 100% 성공(Report 채움)·테스트 실패(TestFailed)·파싱불가 테스트 fallback(smell 스캔 continue)·비-Go(smell 스킵)·비네이티브 lang loop 쓰기폴백(writeLoopSubmission 실패) 분기를 임시 fixture로 덮는다.
 
 package tsmagate
 
@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/park-jun-woo/reins/pkg/quest"
@@ -292,6 +293,28 @@ func TestPrepare_LoopModeWriteError(t *testing.T) {
 	m, _ := asMeasurement(ctx)
 	if !m.TestFailed || m.FailOutput == "" {
 		t.Fatalf("a generated-test write failure must surface as TestFailed, got %+v", m)
+	}
+}
+
+func TestPrepare_LoopModeNonNativeLangFallbackWriteError(t *testing.T) {
+	// Loop mode with a language that has no native loop pipeline (prepareLoopNative
+	// covers go/typescript/python/rust only): Prepare falls through to the generic
+	// disk-write branch (writeLoopSubmission). With no attributed test, no misnamed
+	// variant, and no canonical-path formula for the language, testTargetPath fails
+	// and Prepare surfaces it as TestFailed (never silent).
+	root := t.TempDir()
+	fn := model.Function{QualifiedName: "app.x", Name: "x", File: filepath.Join("app", "x.rb"), StartLine: 1, EndLine: 1}
+	s := quest.New()
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "ruby", root, fn), []byte("ignored"), true)
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed {
+		t.Fatal("expected TestFailed when the generic loop write path cannot derive a test path")
+	}
+	if !strings.Contains(m.FailOutput, "cannot derive a test path") {
+		t.Fatalf("FailOutput should carry the path-derivation error, got %q", m.FailOutput)
 	}
 }
 
