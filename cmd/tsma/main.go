@@ -17,5 +17,6 @@ func main() {
 	cli.NewQuestCmd("tsma", def, cli.Options{
 		Version: "0.5.1",
 		Loop:    tsmagate.LoopOptions(),
+		Gate:    tsmagate.GateOptions(),
 	}).Execute()
 }
