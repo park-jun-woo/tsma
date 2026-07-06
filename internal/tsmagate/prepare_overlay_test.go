@@ -30,12 +30,12 @@ func pkgDirEntries(t *testing.T, root string) []string {
 	return names
 }
 
-// loopSession returns a session with MetaLoop set, driving Prepare's Go overlay
-// branch.
+// loopSession returns a plain session for Prepare's session argument. The loop
+// (auto) mode that drives Prepare's Go overlay branch is passed as the auto=true
+// argument at each call site (reins v0.3.1 run-mode seam; the old quest.MetaLoop
+// flag was removed in v0.3.0).
 func loopSession() *quest.Session {
-	s := quest.New()
-	s.SetMeta(quest.MetaLoop, true)
-	return s
+	return quest.New()
 }
 
 // TestPrepare_OverlayMeasuresNewFuncWithoutTouchingTree proves a brand-new
@@ -52,7 +52,7 @@ func TestPrepare_OverlayMeasuresNewFuncWithoutTouchingTree(t *testing.T) {
 
 	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
 	it := itemWithPayload(t, "go", root, fn) // Tries == 0 (not the final try)
-	ctx, _, err := New().Prepare(loopSession(), it, []byte(classifyPartialTest))
+	ctx, _, err := New().Prepare(loopSession(), it, []byte(classifyPartialTest), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestPrepare_OverlayNewFuncPassMaterializes(t *testing.T) {
 	})
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
-	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(classifyFullTest))
+	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(classifyFullTest), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestPrepare_OverlayBrokenSiblingDoesNotContaminate(t *testing.T) {
 	// it fails to build, but is overlay-only so it never lands in pkg/.
 	betaFn := model.Function{QualifiedName: "pkg.Beta", Name: "Beta", File: filepath.Join("pkg", "beta.go"), StartLine: 3, EndLine: 3}
 	broken := "package pkg\n\nimport \"testing\"\n\nfunc TestBeta(t *testing.T) { _ = Nonexistent() }\n"
-	bctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, betaFn), []byte(broken))
+	bctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, betaFn), []byte(broken), true)
 	if err != nil {
 		t.Fatalf("Prepare(Beta): %v", err)
 	}
@@ -129,7 +129,7 @@ func TestPrepare_OverlayBrokenSiblingDoesNotContaminate(t *testing.T) {
 	// Alpha now measures cleanly — Beta's broken test never contaminated the package.
 	alphaFn := model.Function{QualifiedName: "pkg.Alpha", Name: "Alpha", File: filepath.Join("pkg", "alpha.go"), StartLine: 3, EndLine: 3}
 	good := "package pkg\n\nimport \"testing\"\n\nfunc TestAlpha(t *testing.T) { if Alpha() != 1 { t.Fatal(\"x\") } }\n"
-	actx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, alphaFn), []byte(good))
+	actx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, alphaFn), []byte(good), true)
 	if err != nil {
 		t.Fatalf("Prepare(Alpha): %v", err)
 	}
@@ -156,7 +156,7 @@ func TestPrepare_OverlayTruncatedFeedback(t *testing.T) {
 	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
 
 	truncated := "package pkg\n\nimport \"testing\"\n\nfunc TestClassify(t *testing.T) {\n\tif Classify(1) != \"pos\" {" // cut off: no closing braces
-	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(truncated))
+	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(truncated), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestPrepare_OverlayVacuousZeroCoverNotMaterialized(t *testing.T) {
 	it.Tries = quest.MaxTries - 1 // final try: would lock *통과DONE* if accepted
 
 	noCall := "package pkg\n\nimport \"testing\"\n\nfunc TestClassify(t *testing.T) {\n\tif 1+1 != 2 {\n\t\tt.Fatal(\"x\")\n\t}\n}\n"
-	ctx, _, err := New().Prepare(loopSession(), it, []byte(noCall))
+	ctx, _, err := New().Prepare(loopSession(), it, []byte(noCall), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestPrepare_OverlayMalformedTestNameRejected(t *testing.T) {
 	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
 
 	malformed := "package pkg\n\nimport \"testing\"\n\nfunc TestpyIndent(t *testing.T) {\n\t_ = Classify(1)\n}\n"
-	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(malformed))
+	ctx, _, err := New().Prepare(loopSession(), itemWithPayload(t, "go", root, fn), []byte(malformed), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestPrepare_OverlayNoResidueAfterMeasure(t *testing.T) {
 			fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
 			it := itemWithPayload(t, "go", root, fn)
 			it.Tries = c.tries
-			if _, _, err := New().Prepare(loopSession(), it, []byte(c.raw)); err != nil {
+			if _, _, err := New().Prepare(loopSession(), it, []byte(c.raw), true); err != nil {
 				t.Fatalf("Prepare: %v", err)
 			}
 			if r := tsmaTestResidue(t, root); len(r) != 0 {

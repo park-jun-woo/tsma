@@ -301,6 +301,119 @@ func TestContainsPytestMissingFile(t *testing.T) {
 	}
 }
 
+func TestContainsPytestReadsFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "requirements.txt")
+	writeFile(t, path, "PyTest==7.0\n")
+	if !containsPytest(path, "pytest") {
+		t.Error("expected true for case-insensitive pytest content")
+	}
+	if containsPytest(path, "nose") {
+		t.Error("expected false when the pattern is absent")
+	}
+}
+
+func TestHasPytestLayoutTestPrefixFile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "tests", "test_a.py"), "def test_a():\n    pass\n")
+	if !hasPytestLayout(dir) {
+		t.Error("expected true for tests/test_a.py")
+	}
+}
+
+func TestHasPytestLayoutTestSuffixFile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "tests", "a_test.py"), "def test_a():\n    pass\n")
+	if !hasPytestLayout(dir) {
+		t.Error("expected true for tests/a_test.py")
+	}
+	// A plain .py that is neither test_-prefixed nor _test-suffixed stays false.
+	dir2 := t.TempDir()
+	writeFile(t, filepath.Join(dir2, "tests", "helpers.py"), "x = 1\n")
+	if hasPytestLayout(dir2) {
+		t.Error("expected false when tests/ holds only non-test .py files")
+	}
+}
+
+func TestProbePytestVenvFindsExecutable(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".venv", "bin", "pytest"), "#!/bin/sh\n")
+	if !probePytestVenv(dir) {
+		t.Error("expected true for .venv/bin/pytest")
+	}
+	dir2 := t.TempDir()
+	writeFile(t, filepath.Join(dir2, "venv", "bin", "pytest"), "#!/bin/sh\n")
+	if !probePytestVenv(dir2) {
+		t.Error("expected true for venv/bin/pytest")
+	}
+}
+
+func TestIsDepTableHeaderForms(t *testing.T) {
+	for _, line := range []string{
+		"[project.optional-dependencies]",
+		"[dependency-groups]",
+		"[project.optional-dependencies.test]",
+		"[dependency-groups.dev]",
+	} {
+		if !isDepTableHeader(line) {
+			t.Errorf("isDepTableHeader(%q) = false, want true", line)
+		}
+	}
+	for _, line := range []string{"[project]", "[tool.pytest.ini_options]"} {
+		if isDepTableHeader(line) {
+			t.Errorf("isDepTableHeader(%q) = true, want false", line)
+		}
+	}
+}
+
+func TestAdvanceDepScanTransitions(t *testing.T) {
+	// A non-dependency [section] header clears any open state.
+	hit, st := advanceDepScan(depScanState{inDepArray: true}, "[tool.black]")
+	if hit || st.inDepTable || st.inDepArray {
+		t.Errorf("non-dep header: hit=%v st=%+v", hit, st)
+	}
+	// A dependency-table header opens the table.
+	hit, st = advanceDepScan(st, "[project.optional-dependencies]")
+	if hit || !st.inDepTable {
+		t.Errorf("dep header: hit=%v st=%+v", hit, st)
+	}
+	// Inside the dependency table a pytest token is a hit.
+	hit, _ = advanceDepScan(st, `dev = ["pytest>=8.0"]`)
+	if !hit {
+		t.Error("pytest inside a dependency table should hit")
+	}
+	// An inline dependencies assignment with pytest hits immediately.
+	hit, _ = advanceDepScan(depScanState{}, `dependencies = ["click", "pytest"]`)
+	if !hit {
+		t.Error("inline dependencies pytest should hit")
+	}
+	// An inline dependencies assignment without pytest, closed on the same line.
+	hit, st = advanceDepScan(depScanState{}, `dependencies = ["click"]`)
+	if hit || st.inDepArray {
+		t.Errorf("closed inline dependencies: hit=%v st=%+v", hit, st)
+	}
+	// A multiline dependencies array opens...
+	hit, st = advanceDepScan(depScanState{}, "dependencies = [")
+	if hit || !st.inDepArray {
+		t.Errorf("array opener: hit=%v st=%+v", hit, st)
+	}
+	// ...a pytest entry inside the open array hits...
+	hit, _ = advanceDepScan(st, `"pytest>=8.0",`)
+	if !hit {
+		t.Error("pytest inside an open array should hit")
+	}
+	// ...and a closing bracket ends the array.
+	hit, st = advanceDepScan(st, "]")
+	if hit || st.inDepArray {
+		t.Errorf("array closer: hit=%v st=%+v", hit, st)
+	}
+	// An unrelated line with no open state reports nothing.
+	hit, st = advanceDepScan(depScanState{}, `name = "x"`)
+	if hit || st.inDepTable || st.inDepArray {
+		t.Errorf("plain line: hit=%v st=%+v", hit, st)
+	}
+}
+
 func TestFileExists(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "f")

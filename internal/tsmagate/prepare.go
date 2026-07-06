@@ -1,5 +1,5 @@
 //ff:func feature=gate type=helper control=sequence level=error
-//ff:what Prepare: 부작용 격리 지점. payload에서 함수를 복원→(loop 모드면 raw=생성테스트를 디스크에 기록)→테스트 재매칭(match.NewFuncMatcher)→테스트 실행(runner.NewRunner.Run)→통과 시 커버리지 측정(coverage.NewChecker.Check)→결과를 measurement으로 묶어 gate.Context에 실어 반환한다. 수동 submit(MetaLoop 미설정)은 raw를 무시하고 디스크-truth만 재측정; loop(MetaLoop=true)는 정제→경로도출→쓰기 후 합류한다. 테스트 실패/측정/쓰기 에러는 measurement.TestFailed 플래그로 표현(룰이 발화하도록; short verdict 단락 대신 Rules 경유로 RootCause 보존).
+//ff:what Prepare: 부작용 격리 지점. payload에서 함수를 복원→(loop 모드면 raw=생성테스트를 디스크에 기록)→테스트 재매칭(match.NewFuncMatcher)→테스트 실행(runner.NewRunner.Run)→통과 시 커버리지 측정(coverage.NewChecker.Check)→결과를 measurement으로 묶어 gate.Context에 실어 반환한다. 실행 모드는 reins가 넘겨주는 auto 인자(loop 자동=true, 수동 next/submit=false; 구 quest.MetaLoop 대체). 수동 submit(auto=false)은 raw를 무시하고 디스크-truth만 재측정; loop(auto=true)는 정제→경로도출→쓰기 후 합류한다. 테스트 실패/측정/쓰기 에러는 measurement.TestFailed 플래그로 표현(룰이 발화하도록; short verdict 단락 대신 Rules 경유로 RootCause 보존).
 
 package tsmagate
 
@@ -26,7 +26,7 @@ import (
 // even a broken build flows through Rules so Verdict.RootCause names the rule.
 // The MaxTries→DONE auto-accept (rulebook G-003) is the reins ratchet's job, not
 // a rule's, so Prepare never decides DONE.
-func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate.Context, *quest.Verdict, error) {
+func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte, auto bool) (gate.Context, *quest.Verdict, error) {
 	var p funcPayload
 	if err := it.DecodePayload(&p); err != nil {
 		return gate.Context{}, nil, fmt.Errorf("decode payload for %s: %w", it.Key, err)
@@ -39,7 +39,7 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	// touched, so a broken generation cannot contaminate siblings and a brand-new
 	// test still attributes (the disk re-match is bypassed). This returns before
 	// the disk-truth path below; languages without a native path fall through.
-	if isLoopMode(s) {
+	if auto {
 		if lm, ok := prepareLoopNative(it, p, raw); ok {
 			return gate.Context{Item: it, Submission: lm}, nil, nil
 		}
@@ -47,28 +47,19 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 
 	m := &measurement{FuncName: fn.QualifiedName}
 
-	// Loop mode only (reins sets quest.MetaLoop while the `loop` command runs):
-	// raw is the LLM-generated test file and must reach disk before measurement,
-	// otherwise coverage never changes and every retry FAILs identically until
-	// MaxTries locks DONE (improvement 0). Manual submit (MetaLoop unset) skips
-	// this block, preserving the disk-truth contract — a submitted artifact is
-	// never written to an arbitrary path. Order (§2-1/§2-2): derive path from a
-	// pre-write match → sanitize → write; then fall through to the existing
-	// re-match → run → measure so loop and submit share one measurement path. A
-	// path-derivation or write failure is surfaced as TestFailed (never silent),
-	// which the tests-must-pass rule turns into a FAIL the loop feeds back.
-	if isLoopMode(s) {
-		pre, preFound := match.NewFuncMatcher(p.Lang).MatchFunc(p.Root, &fn)
-		path, err := testTargetPath(p, pre, preFound)
-		if err != nil {
-			m.TestFailed = true
-			m.FailOutput = err.Error()
-			return gate.Context{Item: it, Submission: m}, nil, nil
-		}
-		// BUG-002: accumulate per-function (QualifiedName) marker block instead of a
-		// whole-file overwrite (Java/C# write path; promoteMerged merges this fn's
-		// block into whatever is at `path` and writes verbatim — markers survive).
-		if err := promoteMerged(p.Root, path, sanitizeSource(p.Lang, string(raw)), fn.QualifiedName, p.Lang); err != nil {
+	// Loop mode only (auto==true when reins drives the `loop` command's internal
+	// tick): raw is the LLM-generated test file and must reach disk before
+	// measurement, otherwise coverage never changes and every retry FAILs
+	// identically until MaxTries locks DONE (improvement 0). Manual submit
+	// (auto==false) skips this block, preserving the disk-truth contract — a
+	// submitted artifact is never written to an arbitrary path.
+	// writeLoopSubmission does the §2-1/§2-2 pre-match → derive path → sanitize →
+	// write; then Prepare falls through to the existing re-match → run → measure
+	// so loop and submit share one measurement path. A path-derivation or write
+	// failure is surfaced as TestFailed (never silent), which the tests-must-pass
+	// rule turns into a FAIL the loop feeds back.
+	if auto {
+		if err := writeLoopSubmission(p, raw); err != nil {
 			m.TestFailed = true
 			m.FailOutput = err.Error()
 			return gate.Context{Item: it, Submission: m}, nil, nil
@@ -125,18 +116,4 @@ func (d *Definition) Prepare(s *quest.Session, it *quest.Item, raw []byte) (gate
 	m.Report = report
 
 	return gate.Context{Item: it, Submission: m}, nil, nil
-}
-
-// isLoopMode reports whether Prepare is being driven by the reins `loop` command,
-// which sets quest.MetaLoop=true on the session for the loop's duration. It is
-// nil-safe: a manual submit/next path (and the unit tests) may pass a nil session,
-// which is treated as not-loop so the disk-truth contract holds. Only this signal
-// — the run mode, not the presence of raw bytes — gates the generated-test write
-// (§2-1), so submit's --in payload is never written to disk.
-func isLoopMode(s *quest.Session) bool {
-	if s == nil {
-		return false
-	}
-	v, ok := s.GetMeta(quest.MetaLoop)
-	return ok && v == true
 }

@@ -38,6 +38,17 @@ func TestSanitizeRsSource_UnwrapsFence(t *testing.T) {
 	}
 }
 
+func TestSanitizeRsSource_NoFence(t *testing.T) {
+	raw := "  #[cfg(test)]\nmod tests { #[test] fn t() {} }  \n"
+	got := sanitizeRsSource(raw)
+	if !strings.Contains(got, "mod tests") || strings.Contains(got, "```") {
+		t.Errorf("no-fence source mangled: %q", got)
+	}
+	if !strings.HasSuffix(got, "\n") {
+		t.Errorf("sanitized source must end with a newline: %q", got)
+	}
+}
+
 func TestParseRsTestFuncs_BalanceAndNames(t *testing.T) {
 	ok := "#[cfg(test)]\nmod tests {\n  #[test]\n  fn a() {}\n  #[tokio::test]\n  async fn b() {}\n}\n"
 	names, good := parseRsTestFuncs(ok)

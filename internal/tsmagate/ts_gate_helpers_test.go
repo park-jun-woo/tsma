@@ -75,6 +75,19 @@ func TestScanSmells_Dispatch(t *testing.T) {
 	if got := scanSmells("typescript", t.TempDir(), []string{"missing.test.ts"}); len(got) != 0 {
 		t.Errorf("scanSmells(typescript, missing) = %v, want none", got)
 	}
+	// a language with no detector at all -> nil (the default arm).
+	if got := scanSmells("ruby", "/root", []string{"a_test.rb"}); got != nil {
+		t.Errorf("scanSmells(ruby) = %v, want nil", got)
+	}
+}
+
+func TestScanTSSmells_ScanErrorSkipped(t *testing.T) {
+	// An unresolvable tree-sitter command makes every ScanTS call error; the
+	// scanner must skip the file (continue) and report no findings.
+	t.Setenv("TSMA_TREE_SITTER", "tsma-bogus-binary-xyz")
+	if got := scanTSSmells(t.TempDir(), []string{"a.test.ts"}); got != nil {
+		t.Errorf("scanTSSmells with scan errors = %v, want nil", got)
+	}
 }
 
 func TestScanTSSmells(t *testing.T) {
@@ -188,6 +201,18 @@ func TestPrepareLoopNative_Dispatch(t *testing.T) {
 	m, ok := prepareLoopNative(&quest.Item{Key: "p.add"}, funcPayload{Lang: "go", Root: t.TempDir(), Fn: model.Function{Name: "add"}}, []byte("not go source"))
 	if !ok || m == nil || !m.TestFailed || !m.Truncated {
 		t.Fatalf("prepareLoopNative(go, garbage) = (%+v,%v)", m, ok)
+	}
+
+	// Python: .tsma as a regular file makes the backing write fail inside
+	// buildLoopPyTestMatch — exercises the "python" dispatch arm returning a
+	// TestFailed measurement without needing a Python toolchain.
+	pyRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(pyRoot, ".tsma"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pyM, pyOK := prepareLoopNative(&quest.Item{Key: "src.calc.classify"}, funcPayload{Lang: "python", Root: pyRoot, Fn: model.Function{File: "src/calc.py", QualifiedName: "src.classify"}}, []byte("def test_x():\n    pass\n"))
+	if !pyOK || pyM == nil || !pyM.TestFailed {
+		t.Errorf("prepareLoopNative(python) = (%+v,%v), want non-nil TestFailed,true", pyM, pyOK)
 	}
 
 	// TypeScript: drives prepareLoopTS end-to-end over a real temp project. The

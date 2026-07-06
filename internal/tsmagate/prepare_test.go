@@ -31,7 +31,7 @@ func chdirTo(t *testing.T, dir string) {
 
 func TestPrepare_DecodeError(t *testing.T) {
 	it := &quest.Item{Key: "k", State: quest.TODO, Payload: json.RawMessage("{bad")}
-	if _, _, err := New().Prepare(nil, it, nil); err == nil {
+	if _, _, err := New().Prepare(nil, it, nil, false); err == nil {
 		t.Fatal("expected a decode error for invalid payload")
 	}
 }
@@ -44,7 +44,7 @@ func TestPrepare_NoMatch(t *testing.T) {
 		"pkg/foo.go": "package pkg\n\nfunc Foo() int { return 1 }\n",
 	})
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestPrepare_GoSuccessFullCoverage(t *testing.T) {
 	})
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestPrepare_GoTestFails(t *testing.T) {
 	})
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestPrepare_BrokenTestFileScanSkipped(t *testing.T) {
 	})
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -119,22 +119,29 @@ func TestPrepare_BrokenTestFileScanSkipped(t *testing.T) {
 	}
 }
 
-func TestIsLoopMode(t *testing.T) {
-	if isLoopMode(nil) {
-		t.Error("a nil session must not be loop mode")
+func TestPrepare_ManualModeIgnoresRaw(t *testing.T) {
+	// Manual mode (auto=false, as reins passes for next/submit): raw is a complete
+	// covering test, but the disk-truth contract means Prepare must NOT write it to
+	// disk. With no test on disk the function is unattributed, so this is TestFailed
+	// ("no test file attributed") — and crucially classify_test.go is never created.
+	// This is the counterpart to TestPrepare_LoopModeWritesAndMeasures and pins the
+	// manual/loop split that the removed quest.MetaLoop signal used to gate.
+	root := writeGoPkg(t, map[string]string{
+		"go.mod":          "module manualtest\n\ngo 1.22\n",
+		"pkg/classify.go": classifySrc,
+	})
+	chdirTo(t, root)
+	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), []byte(classifyFullTest), false)
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
 	}
-	s := quest.New()
-	if isLoopMode(s) {
-		t.Error("a session without MetaLoop must not be loop mode")
+	if _, statErr := os.Stat(filepath.Join(root, "pkg", "classify_test.go")); !os.IsNotExist(statErr) {
+		t.Fatalf("manual mode must not write the submitted raw to disk, stat err = %v", statErr)
 	}
-	s.SetMeta(quest.MetaLoop, true)
-	if !isLoopMode(s) {
-		t.Error("a session with MetaLoop=true must be loop mode")
-	}
-	other := quest.New()
-	other.SetMeta(quest.MetaLoop, "not-a-bool")
-	if isLoopMode(other) {
-		t.Error("MetaLoop set to a non-true value must not be loop mode")
+	m, _ := asMeasurement(ctx)
+	if !m.TestFailed {
+		t.Fatal("manual mode with no test on disk must be TestFailed (raw is ignored, not written)")
 	}
 }
 
@@ -148,8 +155,7 @@ func TestPrepare_LoopModeWritesAndMeasures(t *testing.T) {
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Classify", Name: "Classify", File: filepath.Join("pkg", "classify.go"), StartLine: 3, EndLine: 8}
 	s := quest.New()
-	s.SetMeta(quest.MetaLoop, true)
-	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte(classifyFullTest))
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte(classifyFullTest), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -171,8 +177,7 @@ func TestPrepare_LoopModeTargetPathError(t *testing.T) {
 	root := t.TempDir()
 	fn := model.Function{QualifiedName: "app.x", Name: "x", File: filepath.Join("app", "x.py"), StartLine: 1, EndLine: 1}
 	s := quest.New()
-	s.SetMeta(quest.MetaLoop, true)
-	ctx, _, err := New().Prepare(s, itemWithPayload(t, "python", root, fn), []byte("ignored"))
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "python", root, fn), []byte("ignored"), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -197,9 +202,8 @@ func TestPrepare_LoopModeMaterializeError(t *testing.T) {
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
 	s := quest.New()
-	s.SetMeta(quest.MetaLoop, true)
 	full := "package pkg\n\nimport \"testing\"\n\nfunc TestFoo(t *testing.T) { if Foo() != 1 { t.Fatal(\"x\") } }\n"
-	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte(full))
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "go", root, fn), []byte(full), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -224,7 +228,7 @@ func TestPrepare_GoCoverageError(t *testing.T) {
 	}
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -252,7 +256,7 @@ func TestPrepare_RunnerErrorFromUnreadableFallback(t *testing.T) {
 	}
 	chdirTo(t, root)
 	fn := model.Function{QualifiedName: "pkg.Foo", Name: "Foo", File: filepath.Join("pkg", "foo.go"), StartLine: 3, EndLine: 3}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "go", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -281,8 +285,7 @@ func TestPrepare_LoopModeWriteError(t *testing.T) {
 	}
 	fn := model.Function{QualifiedName: "app.do_work", Name: "do_work", File: filepath.Join("app", "service.py"), StartLine: 1, EndLine: 2}
 	s := quest.New()
-	s.SetMeta(quest.MetaLoop, true)
-	ctx, _, err := New().Prepare(s, itemWithPayload(t, "python", root, fn), []byte("ignored"))
+	ctx, _, err := New().Prepare(s, itemWithPayload(t, "python", root, fn), []byte("ignored"), true)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
@@ -309,7 +312,7 @@ func TestPrepare_NonGoSkipsSmellScan(t *testing.T) {
 		t.Fatal(err)
 	}
 	fn := model.Function{QualifiedName: "app.do_work", Name: "do_work", File: filepath.Join("app", "service.py"), StartLine: 1, EndLine: 2}
-	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "python", root, fn), nil)
+	ctx, _, err := New().Prepare(nil, itemWithPayload(t, "python", root, fn), nil, false)
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}

@@ -199,6 +199,66 @@ func TestResolveCommand(t *testing.T) {
 	}
 }
 
+func TestResolveCommandPathHit(t *testing.T) {
+	// relative name found on PATH -> resolved path returned.
+	dir := t.TempDir()
+	f := filepath.Join(dir, "fake-ts-on-path")
+	if err := os.WriteFile(f, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	t.Setenv("TSMA_TREE_SITTER", "fake-ts-on-path")
+	if got := ResolveCommand(); got != f {
+		t.Errorf("PATH hit = %q, want %q", got, f)
+	}
+}
+
+// chdir switches the working directory for the test and restores it on cleanup.
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(wd); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestResolveGrammarProbe(t *testing.T) {
+	// no env override, grammar under cwd node_modules -> probe hit.
+	dir := t.TempDir()
+	pkg := filepath.Join(dir, "node_modules", "tree-sitter-java")
+	if err := os.MkdirAll(pkg, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TSMA_JAVA_GRAMMAR", "")
+	chdir(t, dir)
+	want := filepath.Join("node_modules", "tree-sitter-java")
+	if got := ResolveGrammar("java"); got != want {
+		t.Errorf("probe hit = %q, want %q", got, want)
+	}
+}
+
+func TestResolveGrammarProbeMiss(t *testing.T) {
+	// no env override, no grammar in cwd, /tmp, or home -> "".
+	empty := t.TempDir()
+	t.Setenv("TSMA_RUST_GRAMMAR", "")
+	t.Setenv("HOME", empty)
+	chdir(t, empty)
+	if grammarDirExists(filepath.Join("/tmp", "node_modules", "tree-sitter-rust")) {
+		t.Skip("/tmp holds a rust grammar; miss branch not exercisable")
+	}
+	if got := ResolveGrammar("rust"); got != "" {
+		t.Errorf("probe miss = %q, want empty", got)
+	}
+}
+
 func TestResolveGrammar(t *testing.T) {
 	// unknown language -> "".
 	if got := ResolveGrammar("klingon"); got != "" {

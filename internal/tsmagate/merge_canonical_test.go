@@ -174,6 +174,24 @@ func TestReplaceOrAddBlock_AppendIntoEmptyBody(t *testing.T) {
 	}
 }
 
+func TestReplaceOrAddBlock_ReplacesExistingBlock(t *testing.T) {
+	tok := commentTokensFor("go")
+	oldBlock := wrapBlock("func TestX(t *testing.T){ _ = 1 }", "pkg.X", tok)
+	other := wrapBlock("func TestY(t *testing.T){}", "pkg.Y", tok)
+	body := oldBlock + "\n\n" + other
+	newBlock := wrapBlock("func TestX(t *testing.T){ _ = 2 }", "pkg.X", tok)
+	got := replaceOrAddBlock(body, newBlock, "pkg.X", tok)
+	if strings.Contains(got, "_ = 1") {
+		t.Errorf("old block body must be replaced:\n%s", got)
+	}
+	if !strings.Contains(got, "_ = 2") || !strings.Contains(got, "fn=pkg.Y") {
+		t.Errorf("new block and the other fn's block must both be present:\n%s", got)
+	}
+	if strings.Count(got, "tsma:begin fn=pkg.X") != 1 {
+		t.Errorf("pkg.X block must appear exactly once (replace, not append):\n%s", got)
+	}
+}
+
 func TestSplitHeader_EndMarkerBoundary(t *testing.T) {
 	tok := commentTokensFor("go")
 	// A file whose first content line is an end-marker (degenerate) must still
